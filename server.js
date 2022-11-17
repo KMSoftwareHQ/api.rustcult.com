@@ -8,9 +8,6 @@ const session = require('express-session');
 
 const app = express();
 
-// Serve static files.
-app.use(express.static(__dirname + '/static', { dotfiles: 'allow' }));
-
 // Redirect http to https.
 app.use((request, response, next) => {
     if (request.secure) {
@@ -53,8 +50,17 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get('/', (req, res) => {
-    res.send(req.user);
+    console.log('Hello World!');
+    console.log('req.user:', req.user);
+    if (req.user) {
+	res.send(`Hello Agent ${req.user.displayName} <a href="/logout">Logout</a>`);
+    } else {
+	res.sendFile('index.html', { root: 'static' });
+    }
 });
+
+// Serve static files.
+app.use(express.static(__dirname + '/static', { dotfiles: 'allow' }));
 
 app.get('/auth/steam', passport.authenticate('steam', {failureRedirect: '/'}), function (req, res) {
     res.redirect('/');
@@ -62,6 +68,16 @@ app.get('/auth/steam', passport.authenticate('steam', {failureRedirect: '/'}), f
 
 app.get('/auth/steam/return', passport.authenticate('steam', {failureRedirect: '/'}), function (req, res) {
     res.redirect('/');
+});
+
+app.get('/logout', (req, res, next) => {
+    req.logout((err) => {
+	if (err) {
+	    return next(err);
+	} else {
+	    res.redirect('/');
+	}
+    });
 });
 
 // Start the https webserver.
