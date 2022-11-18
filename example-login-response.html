@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="description" content="Rust+ - Login Success" />
+    <meta name="author" content="Facepunch" />
+    <title>Rust+ - Login Success</title>
+    <link rel="stylesheet" href="/css/styles.css?v=TPj3rFsMN1DpRXu4-tvGAdhgvOmEmIeOp9PKWkLzlvA" />
+
+  </head>
+  <body>
+
+
+
+    <div class="page-header">
+      <img src="/image/splash-logo.png" alt="Rust+ Branding" />
+    </div>
+    <div class="page-wrapper">
+      <div class="overlay-container has-avatar">
+	<img class="avatar" src="https://avatars.akamai.steamstatic.com/59174e4b802ae81f67afab9dd5c3830fb378ad71_full.jpg" alt="Government Weather Advisory Avatar " />
+	<div class="overlay-body">
+	  <h1>Welcome, Government Weather Advisory</h1>
+	</div>
+      </div>
+    </div>
+
+
+    <script>
+      setTimeout(function() {
+      if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage('{\"SteamId\":\"76561198054245955\",\"Token\":\"eyJzdGVhbUlkIjoiNzY1NjExOTgwNTQyNDU5NTUiLCJpc3MiOjE2Njg3MzU3MzUsImV4cCI6MTY2OTk0NTMzNX0=.NaEEKRijVshN3xFJQ1h5NVORvMt9Wg1BkRxJXkG0WHCsccS3lQlhV7bYTsKQASFrqvG2Zc/pQozvs/m4HDVRCQ==\"}');
+      } else {
+      alert('Failed to send login message to the Rust+ app.');
+      }
+      }, 2000);
+    </script>
+
+
+  </body>
+</html>
