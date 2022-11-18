@@ -50,10 +50,8 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 app.get('/', (req, res) => {
-    console.log('Hello World!');
-    console.log('req.user:', req.user);
     if (req.user) {
-	res.send(`Hello Agent ${req.user.displayName} <a href="/logout">Logout</a>`);
+	res.sendFile('app.html', { root: 'static' });
     } else {
 	res.sendFile('index.html', { root: 'static' });
     }
