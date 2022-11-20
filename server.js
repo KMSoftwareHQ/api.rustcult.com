@@ -1,10 +1,13 @@
 const express = require('express');
+const fetch = require('node-fetch');
 const https = require('https');
 const ParseHtml = require('./parse');
 const passport = require('passport');
 const passportSteam = require('passport-steam');
+const PushReceiver = require('push-receiver');
 const secrets = require('./secrets');
 const session = require('express-session');
+const uuid = require('uuid');
 
 const app = express();
 
@@ -82,11 +85,93 @@ app.get('/logout', (req, res, next) => {
     });
 });
 
+async function RegisterWithRustPlus(authToken, expoPushToken) {
+    const url = 'https://companion-rust.facepunch.com:443/api/push/register';
+    const options = {
+	AuthToken: authToken,
+	DeviceId: 'rustplus.js',
+	PushKind: 0,
+	PushToken: expoPushToken,
+    };
+    const response = await fetch(url, {
+	method: 'post',
+	headers: {
+	    'Content-Type': 'application/json',
+	},
+	body: JSON.stringify(options),
+    });
+    console.log('Registered with Rust+', response);
+}
+
+async function GetExpoPushToken(fcmCredentials) {
+    const url = 'https://exp.host/--/api/v2/push/getExpoPushToken';
+    const options = {
+	deviceId: uuid.v4(),
+	experienceId: '@facepunch/RustCompanion',
+	appId: 'com.facepunch.rust.companion',
+	deviceToken: fcmCredentials.fcm.token,
+	type: 'fcm',
+	development: false,
+    };
+    const response = await fetch(url, {
+	method: 'post',
+	headers: {
+	    'Content-Type': 'application/json',
+	},
+	body: JSON.stringify(options),
+    });
+    const responseJson = await response.json();
+    if (responseJson && responseJson.data && responseJson.data.expoPushToken) {
+	return responseJson.data.expoPushToken;
+    } else {
+	return null;
+    }
+}
+
 // Stores a status message for each currently ongoing server pairing request.
 const pairingStatusBySteamId = {};
 
 async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
+    pairingStatusBySteamId[steamId] = 'Registering with FCM';
+    const fcmCredentials = await PushReceiver.register('976529667804');
 
+    pairingStatusBySteamId[steamId] = 'Fetching Expo Push Token';
+    const expoPushToken = await GetExpoPushToken(fcmCredentials).catch((error) => {
+	pairingStatusBySteamId[steamId] = 'Failed to pair';
+	console.log("Failed to fetch Expo Push Token");
+	console.log(error);
+    });
+    if (!expoPushToken) {
+	return;
+    }
+
+    pairingStatusBySteamId[steamId] = 'Registering with Rust+ Companion API';
+    const rustPlusRegistration = await RegisterWithRustPlus(rustPlusAuthToken, expoPushToken).catch((error) => {
+	pairingStatusBySteamId[steamId] = 'Failed to register with Rust+ Companion API';
+	console.log('Failed to register with Rust+ Companion API');
+	console.log(error);
+    });
+
+    pairingStatusBySteamId[steamId] = 'Trying to listen for the Pair button in-game';
+    const fcmClient = await PushReceiver.listen(fcmCredentials, ({ notification, persistentId }) => {
+	delete pairingStatusBySteamId[steamId];
+	const body = JSON.parse(notification.data.body);
+	console.log(body);
+    });
+    pairingStatusBySteamId[steamId] = 'Press the Pair button in-game';
+
+    // Listen for incoming messages for an hour, then close the FCM client..
+    const oneSecond = 1000;
+    const oneMinute = 60 * oneSecond;
+    const oneHour = 60 * oneMinute;
+    setTimeout(() => {
+	try {
+	    delete pairingStatusBySteamId[steamId];
+	    fcmClient.destroy();
+	} catch (error) {
+	    console.log('Error while destroying FCM client:', error);
+	}
+    }, oneHour);
 }
 
 app.post('/pair', (req, res) => {
@@ -105,10 +190,13 @@ app.post('/pair', (req, res) => {
 	    return res.json({ error: 'You must pair in-game using the same Steam account you are logged in here with' });
 	}
 	pairingStatusBySteamId[steamId] = 'Initiating server pairing';
+	// Do not await. Respond immediately with the status of the server pairing request.
+	// The client will poll for the updated status of their pairing request.
 	HandleServerPairingRequest(steamId, parsed.token);
     }
+    const status = pairingStatusBySteamId[steamId] || 'No pairing request underway';
     // Get the status of this user's in-progress pairing request, if any.
-    const response = { status: pairingStatusBySteamId[steamId] };
+    const response = { status };
     return res.json(response);
 });
 
