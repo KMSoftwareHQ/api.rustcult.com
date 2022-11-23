@@ -63,9 +63,17 @@ app.use(passport.session());
 
 app.get('/', (req, res) => {
     if (req.user) {
-	res.sendFile('app.html', { root: 'static' });
+	res.redirect('/map');
     } else {
 	res.sendFile('index.html', { root: 'static' });
+    }
+});
+
+app.get('/map', (req, res) => {
+    if (req.user) {
+	res.sendFile('map.html', { root: 'static' });
+    } else {
+	res.redirect('/');
     }
 });
 
