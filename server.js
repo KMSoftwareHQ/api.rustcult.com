@@ -1,6 +1,8 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
+const mysql = require('mysql');
+const ExpressMysqlSession = require('express-mysql-session');
 const ParseHtml = require('./parse');
 const passport = require('passport');
 const passportSteam = require('passport-steam');
@@ -9,12 +11,11 @@ const secrets = require('./secrets');
 const session = require('express-session');
 const uuid = require('uuid');
 
-const app = express();
+// Connect to the database.
+const db = mysql.createConnection(secrets.mysql);
 
-// Time-related constants.
-const oneSecond = 1000;
-const oneMinute = 60 * oneSecond;
-const oneHour = 60 * oneMinute;
+// This is the express app.
+const app = express();
 
 // Turn on support for JSON and url-encoded POST bodies.
 app.use(express.json());
@@ -37,7 +38,7 @@ passport.deserializeUser((user, done) => {
     done(null, user);
 });
 
-// Initiate Strategy
+// Steam login strategy middleware.
 passport.use(new passportSteam.Strategy({
     returnURL: 'https://rustgovernment.com/auth/steam/return',
     realm: 'https://rustgovernment.com/',
@@ -49,13 +50,18 @@ passport.use(new passportSteam.Strategy({
     });
 }));
 
+// Set up mysql-based session store. The sessions are stored in an RDS database.
+const maxSessionAgeMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
+const MySQLStore = ExpressMysqlSession(session);
+const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db);
 app.use(session({
-    secret: secrets.sessionSecretString,
-    saveUninitialized: true,
-    resave: false,
     cookie: {
-	maxAge: 5 * 365.25 * 24 * 60 * 60 * 1000,
+	maxAge: maxSessionAgeMs,
     },
+    resave: false,
+    saveUninitialized: true,
+    secret: secrets.sessionSecretString,
+    store: mysqlSessionStore,
 }));
 
 app.use(passport.initialize());
@@ -201,7 +207,7 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 	} catch (error) {
 	    console.log('Error while destroying FCM client:', error);
 	}
-    }, oneHour);
+    }, 3600 * 1000);
 }
 
 app.post('/pair', (req, res) => {
@@ -238,3 +244,8 @@ https.createServer(secrets.sslConfig, app).listen(443);
 
 // Run an http webserver whose only job is to redirect http to https.
 app.listen(80);
+
+// Clean up when the process shuts down.
+process.on('exit', () => {
+    sessionStore.close();
+});
