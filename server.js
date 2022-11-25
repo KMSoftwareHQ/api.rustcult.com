@@ -1,3 +1,4 @@
+// A third-party Rust+ web app that allows multiple teams to see each other on the map.
 const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
@@ -63,10 +64,10 @@ app.use(session({
     secret: secrets.sessionSecretString,
     store: mysqlSessionStore,
 }));
-
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Landing page for non-logged=in users.
 app.get('/', (req, res) => {
     if (req.user) {
 	res.redirect('/map');
@@ -75,6 +76,7 @@ app.get('/', (req, res) => {
     }
 });
 
+// The main app webpage for logged-in users.
 app.get('/map', (req, res) => {
     if (req.user) {
 	res.sendFile('map.html', { root: 'static' });
@@ -86,14 +88,15 @@ app.get('/map', (req, res) => {
 // Serve static files.
 app.use(express.static(__dirname + '/static', { dotfiles: 'allow' }));
 
+// Steam login endpoints.
 app.get('/auth/steam', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
     res.redirect('/');
 });
-
 app.get('/auth/steam/return', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
     res.redirect('/');
 });
 
+// Logout endpoint.
 app.get('/logout', (req, res, next) => {
     req.logout((err) => {
 	if (err) {
@@ -104,6 +107,7 @@ app.get('/logout', (req, res, next) => {
     });
 });
 
+// Helper function for the server pairing flow.
 async function RegisterWithRustPlus(authToken, expoPushToken) {
     const url = 'https://companion-rust.facepunch.com:443/api/push/register';
     const options = {
@@ -121,6 +125,7 @@ async function RegisterWithRustPlus(authToken, expoPushToken) {
     });
 }
 
+// Helper function for the server pairing flow.
 async function GetExpoPushToken(fcmCredentials) {
     const url = 'https://exp.host/--/api/v2/push/getExpoPushToken';
     const options = {
@@ -210,6 +215,9 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
     }, 3600 * 1000);
 }
 
+// Returns the status of a logged-in user's ongoing server pairing request.
+// Starts a new server pairing request if none is ongoing and the needed
+// token is passed in as input,
 app.post('/pair', (req, res) => {
     if (!req.user) {
 	return res.redirect('/');
