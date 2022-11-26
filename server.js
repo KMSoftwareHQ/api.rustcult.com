@@ -1,8 +1,8 @@
 // A third-party Rust+ web app that allows multiple teams to see each other on the map.
+const db = require('./database');
 const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
-const mysql = require('mysql');
 const ExpressMysqlSession = require('express-mysql-session');
 const ParseHtml = require('./parse');
 const passport = require('passport');
@@ -11,9 +11,6 @@ const PushReceiver = require('push-receiver');
 const secrets = require('./secrets');
 const session = require('express-session');
 const uuid = require('uuid');
-
-// Connect to the database.
-const db = mysql.createConnection(secrets.mysql);
 
 // This is the express app.
 const app = express();
@@ -54,7 +51,7 @@ passport.use(new passportSteam.Strategy({
 // Set up mysql-based session store. The sessions are stored in an RDS database.
 const maxSessionAgeMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
 const MySQLStore = ExpressMysqlSession(session);
-const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db);
+const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db.GetConnection());
 app.use(session({
     cookie: {
 	maxAge: maxSessionAgeMs,
@@ -256,4 +253,5 @@ app.listen(80);
 // Clean up when the process shuts down.
 process.on('exit', () => {
     sessionStore.close();
+    db.End();
 });
