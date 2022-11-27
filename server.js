@@ -10,6 +10,7 @@ const passportSteam = require('passport-steam');
 const PushReceiver = require('push-receiver');
 const secrets = require('./secrets');
 const session = require('express-session');
+const UserCache = require('./user-cache');
 const uuid = require('uuid');
 
 // This is the express app.
@@ -74,8 +75,11 @@ app.get('/', (req, res) => {
 });
 
 // The main app webpage for logged-in users.
-app.get('/map', (req, res) => {
+app.get('/map', async (req, res) => {
     if (req.user) {
+	const user = await UserCache.GetUser(req.user);
+	await user.UpdateBasedOnSteamUserRecord(req.user);
+	console.log(user.steamId, user.steamName, user.avatar, user.profileUrl);
 	res.sendFile('map.html', { root: 'static' });
     } else {
 	res.redirect('/');
@@ -244,14 +248,18 @@ app.post('/pair', (req, res) => {
     return res.json(response);
 });
 
-// Start the https webserver.
-https.createServer(secrets.sslConfig, app).listen(443);
-
-// Run an http webserver whose only job is to redirect http to https.
-app.listen(80);
-
 // Clean up when the process shuts down.
 process.on('exit', () => {
     sessionStore.close();
     db.End();
 });
+
+async function Main() {
+    await UserCache.Initialize();
+    // Start the https webserver.
+    https.createServer(secrets.sslConfig, app).listen(443);
+    // Run an http webserver whose only job is to redirect http to https.
+    app.listen(80);
+}
+
+Main();

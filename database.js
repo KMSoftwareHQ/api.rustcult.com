@@ -8,10 +8,23 @@ function GetConnection() {
     return connection;
 }
 
+async function Query(sql, values) {
+    return new Promise((resolve, reject) => {
+	connection.query(sql, values, (err, results) => {
+	    if (err) {
+		reject(err);
+	    } else {
+		resolve(results);
+	    }
+	});
+    });
+}
+
 function End() {
     connection.end();
 }
 
 module.exports = {
     GetConnection,
+    Query,
 };
