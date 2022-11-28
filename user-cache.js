@@ -132,7 +132,18 @@ async function GetUser(reqUser) {
     }
 }
 
+// For debugging purposes.
+function LogAllUsers() {
+    const numUsers = Object.keys(usersBySteamId).length;
+    console.log(`Logging all users from the cache (${numUsers})`);
+    for (const steamId in usersBySteamId) {
+	const user = usersBySteamId[steamId];
+	console.log(user.steamId, user.steamName);
+    }
+}
+
 module.exports = {
     GetUser,
     Initialize,
+    LogAllUsers,
 };

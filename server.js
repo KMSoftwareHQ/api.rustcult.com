@@ -10,6 +10,7 @@ const passportSteam = require('passport-steam');
 const PushReceiver = require('push-receiver');
 const secrets = require('./secrets');
 const ServerCache = require('./server-cache');
+const ServerPairingCache = require('./server-pairing-cache');
 const session = require('express-session');
 const UserCache = require('./user-cache');
 const uuid = require('uuid');
@@ -75,13 +76,20 @@ app.get('/', (req, res) => {
     }
 });
 
+// For debugging purposes. Log everything that's in the cache to the console.
+function LogCacheContents() {
+    UserCache.LogAllUsers();
+    ServerCache.LogAllKnownServers();
+    ServerPairingCache.LogAllKnownPairings();
+}
+
 // The main app webpage for logged-in users.
 app.get('/map', async (req, res) => {
     if (req.user) {
 	const user = await UserCache.GetUser(req.user);
 	await user.UpdateBasedOnSteamUserRecord(req.user);
 	console.log(user.steamId, user.steamName, user.avatar, user.profileUrl);
-	ServerCache.LogAllKnownServers();
+	LogCacheContents();
 	res.sendFile('map.html', { root: 'static' });
     } else {
 	res.redirect('/');
@@ -201,9 +209,12 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 	console.log('Received FCM notification:', JSON.stringify(body));
 	if (body.playerToken) {
 	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
-	    const server = await ServerCache.GetServerRecordFromPairingNotification(body);
-	    console.log('Server record from cache:', server.name);
-	    // Store token (and entire body) in a persistent storage of some kind.
+	    const serverRecord = await ServerCache.GetServerRecordFromPairingNotification(body);
+	    await serverRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
+	    //console.log('Server record from cache:', serverRecord.name);
+	    const pairingRecord = await ServerPairingCache.GetPairingRecordFromPairingNotification(body);
+	    await pairingRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
+	    //console.log('Pairing record from cache:', pairingRecord.token);
 	}
     });
     pairingStatusBySteamId[steamId] = { status: 'Press the Pair button in-game' };
@@ -260,6 +271,7 @@ process.on('exit', () => {
 async function Main() {
     await UserCache.Initialize();
     await ServerCache.Initialize();
+    await ServerPairingCache.Initialize();
     // Start the https webserver.
     https.createServer(secrets.sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
