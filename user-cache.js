@@ -2,6 +2,7 @@ const db = require('./database');
 
 class User {
     constructor(databaseRow) {
+	this.incrementingId = databaseRow.incrementing_id;
 	this.steamId = databaseRow.steam_id;
 	this.steamName = databaseRow.steam_name;
 	this.profileUrl = databaseRow.profile_url;

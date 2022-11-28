@@ -2,6 +2,7 @@ const db = require('./database');
 
 class Server {
     constructor(databaseRow) {
+	this.incrementingId = databaseRow.incrementing_id;
 	this.hostAndPort = databaseRow.host_and_port;
 	this.host = databaseRow.host;
 	this.port = databaseRow.port;
@@ -99,8 +100,8 @@ async function Initialize() {
     const newCache = {};
     const results = await db.Query('SELECT * from users');
     for (const row of results) {
-	const user = new User(row);
-	newCache[user.steamId] = user;
+	const server = new Server(row);
+	newCache[server.hostAndPort] = server;
     }
     serversByHostAndPort = newCache;
 }
