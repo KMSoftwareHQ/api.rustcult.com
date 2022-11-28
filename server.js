@@ -9,6 +9,7 @@ const passport = require('passport');
 const passportSteam = require('passport-steam');
 const PushReceiver = require('push-receiver');
 const secrets = require('./secrets');
+const ServerCache = require('./server-cache');
 const session = require('express-session');
 const UserCache = require('./user-cache');
 const uuid = require('uuid');
@@ -198,8 +199,10 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 	const body = JSON.parse(notification.data.body);
 	console.log('Received server pairing notification.');
 	console.log(body);
+	// TODO: Log the FCM notification regardless of type.
 	if (body.playerToken) {
 	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
+	    const server = await ServerCache.GetServerRecordFromPairingNotification(body);
 	    // Store token (and entire body) in a persistent storage of some kind.
 	}
     });
@@ -256,6 +259,7 @@ process.on('exit', () => {
 
 async function Main() {
     await UserCache.Initialize();
+    await ServerCache.Initialize();
     // Start the https webserver.
     https.createServer(secrets.sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
