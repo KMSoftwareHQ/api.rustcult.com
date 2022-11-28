@@ -195,14 +195,13 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 
     // Step 4. Listen for the user to press the Pair button in-game.
     pairingStatusBySteamId[steamId] = { status: 'Trying to listen for the Pair button in-game' };
-    const fcmClient = await PushReceiver.listen(fcmCredentials, ({ notification, persistentId }) => {
+    const fcmClient = await PushReceiver.listen(fcmCredentials, async ({ notification, persistentId }) => {
 	const body = JSON.parse(notification.data.body);
-	console.log('Received server pairing notification.');
-	console.log(body);
-	// TODO: Log the FCM notification regardless of type.
+	console.log('Received FCM notification:', JSON.stringify(body));
 	if (body.playerToken) {
 	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
 	    const server = await ServerCache.GetServerRecordFromPairingNotification(body);
+	    console.log('Server record from cache:', server.name);
 	    // Store token (and entire body) in a persistent storage of some kind.
 	}
     });

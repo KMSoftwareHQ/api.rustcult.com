@@ -5,6 +5,7 @@ class Server {
 	this.hostAndPort = databaseRow.host_and_port;
 	this.host = databaseRow.host;
 	this.port = databaseRow.port;
+	this.name = databaseRow.name;
 	this.img = databaseRow.img;
 	this.logo = databaseRow.logo;
 	this.id = databaseRow.id;
@@ -12,12 +13,20 @@ class Server {
 	this.description = databaseRow.description;
     }
 
+    async SetName(name) {
+	if (name === this.name) {
+	    return;
+	}
+	this.name = name;
+	await db.Query('UPDATE servers SET name = ? WHERE host_and_port = ?', [this.name, this.hostAndPort]);
+    }
+
     async SetImg(img) {
 	if (img === this.img) {
 	    return;
 	}
 	this.img = img;
-	await db.Query('UPDATE servers SET img = ? WHERE host_and_port = ?', [this.img, this.serverAndPort]);
+	await db.Query('UPDATE servers SET img = ? WHERE host_and_port = ?', [this.img, this.hostAndPort]);
     }
 
     async SetLogo(logo) {
@@ -25,7 +34,7 @@ class Server {
 	    return;
 	}
 	this.logo = logo;
-	await db.Query('UPDATE servers SET logo = ? WHERE host_and_port = ?', [this.logo, this.serverAndPort]);
+	await db.Query('UPDATE servers SET logo = ? WHERE host_and_port = ?', [this.logo, this.hostAndPort]);
     }
 
     async SetId(id) {
@@ -33,7 +42,7 @@ class Server {
 	    return;
 	}
 	this.id = id;
-	await db.Query('UPDATE servers SET id = ? WHERE host_and_port = ?', [this.id, this.serverAndPort]);
+	await db.Query('UPDATE servers SET id = ? WHERE host_and_port = ?', [this.id, this.hostAndPort]);
     }
 
     async SetUrl(url) {
@@ -41,7 +50,7 @@ class Server {
 	    return;
 	}
 	this.url = url;
-	await db.Query('UPDATE servers SET url = ? WHERE host_and_port = ?', [this.url, this.serverAndPort]);
+	await db.Query('UPDATE servers SET url = ? WHERE host_and_port = ?', [this.url, this.hostAndPort]);
     }
 
     async SetDescription(description) {
@@ -49,7 +58,7 @@ class Server {
 	    return;
 	}
 	this.description = description;
-	await db.Query('UPDATE servers SET description = ? WHERE host_and_port = ?', [this., this.serverAndPort]);
+	await db.Query('UPDATE servers SET description = ? WHERE host_and_port = ?', [this.description, this.hostAndPort]);
     }
 
     // Updates the fields in this cached server, and also the database, based on a server pairing confirmation message.
@@ -61,6 +70,9 @@ class Server {
 	const hostAndPort = message.ip + ':' + message.port;
 	if (hostAndPort !== this.hostAndPort) {
 	    throw 'Host and port of server record must match to update the other fields.';
+	}
+	if (message.name) {
+	    await this.SetName(message.name);
 	}
 	if (message.img) {
 	    await this.SetImg(message.img);
@@ -101,12 +113,13 @@ async function CreateNewServerInDatabase(message) {
     console.log(`Creating new server record in the database with host and port ${hostAndPort}`);
     const query = (
 	'INSERT INTO servers ' +
-	'(host_and_port, host, port, img, logo, id, url, description) ' +
-	'VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+	'(host_and_port, host, port, name, img, logo, id, url, description) ' +
+	'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
     );
     const values = [
-	hostAndPort, message.ip, message.port, message.img,
-	message.log, message.id, message.url, message.description
+	hostAndPort, message.ip, message.port,
+	message.name, message.img, message.logo,
+	message.id, message.url, message.description
     ];
     await db.Query(query, values);
     const results = await db.Query('SELECT * FROM servers where host_and_port = ?', [hostAndPort]);

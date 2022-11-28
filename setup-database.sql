@@ -1,24 +1,31 @@
 CREATE TABLE users (
-  steam_id VARCHAR(64),
+  incrementing_id INT NOT NULL AUTO_INCREMENT,
+  steam_id VARCHAR(64) NOT NULL,
   steam_name VARCHAR(256),
   profile_url TEXT,
   avatar TEXT,
   avatar_medium TEXT,
   avatar_full TEXT,
   account_time_created INT,
-  PRIMARY KEY(steam_id)
+  PRIMARY KEY(incrementing_id),
+  INDEX(steam_id),
+  UNIQUE(steam_id)
 );
 
 CREATE TABLE servers (
-  host_and_port VARCHAR(128),
+  incrementing_id INT NOT NULL AUTO_INCREMENT,
+  host_and_port VARCHAR(128) NOT NULL,
   host VARCHAR(128),
   port INT,
+  name TEXT,
   img TEXT,
   logo TEXT,
   id TEXT,
   url TEXT,
   description TEXT,
-  PRIMARY KEY (host_and_port)
+  PRIMARY KEY (incrementing_id),
+  INDEX(host_and_port),
+  UNIQUE(host_and_port)
 );
 
 CREATE TABLE server_pairings (
