@@ -98,7 +98,7 @@ let serversByHostAndPort = {};
 // Must call this to populate the cache from the database.
 async function Initialize() {
     const newCache = {};
-    const results = await db.Query('SELECT * from users');
+    const results = await db.Query('SELECT * from servers');
     for (const row of results) {
 	const server = new Server(row);
 	newCache[server.hostAndPort] = server;
