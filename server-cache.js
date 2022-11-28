@@ -145,7 +145,18 @@ async function GetServerRecordFromPairingNotification(message) {
     }
 }
 
+// For debugging purposes, log all the servers to the console.
+function LogAllKnownServers() {
+    const numServers = Object.keys(serversByHostAndPort).length;
+    console.log(`All known servers (${numServers})`);
+    for (const hostAndPort in serversByHostAndPort) {
+	const server = serversByHostAndPort[hostAndPort];
+	console.log(hostAndPort, server.name);
+    }
+}
+
 module.exports = {
     GetServerRecordFromPairingNotification,
     Initialize,
+    LogAllKnownServers,
 };

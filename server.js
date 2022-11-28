@@ -81,6 +81,7 @@ app.get('/map', async (req, res) => {
 	const user = await UserCache.GetUser(req.user);
 	await user.UpdateBasedOnSteamUserRecord(req.user);
 	console.log(user.steamId, user.steamName, user.avatar, user.profileUrl);
+	ServerCache.LogAllKnownServers();
 	res.sendFile('map.html', { root: 'static' });
     } else {
 	res.redirect('/');
