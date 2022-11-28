@@ -7,9 +7,9 @@ CREATE TABLE users (
   avatar_medium TEXT,
   avatar_full TEXT,
   account_time_created INT,
-  PRIMARY KEY(incrementing_id),
-  INDEX(steam_id),
-  UNIQUE(steam_id)
+  PRIMARY KEY (incrementing_id),
+  INDEX (steam_id),
+  UNIQUE (steam_id)
 );
 
 CREATE TABLE servers (
@@ -24,8 +24,8 @@ CREATE TABLE servers (
   url TEXT,
   description TEXT,
   PRIMARY KEY (incrementing_id),
-  INDEX(host_and_port),
-  UNIQUE(host_and_port)
+  INDEX (host_and_port),
+  UNIQUE (host_and_port)
 );
 
 CREATE TABLE server_pairings (
@@ -34,5 +34,6 @@ CREATE TABLE server_pairings (
   token TEXT,
   consecutive_failure_count INT DEFAULT 0,
   next_retry_time VARCHAR(32),
-  PRIMARY KEY (server_host_and_port, user_steam_id)
+  PRIMARY KEY (server_host_and_port, user_steam_id),
+  UNIQUE (server_host_and_port, user_steam_id)
 );
