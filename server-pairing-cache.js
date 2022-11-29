@@ -158,9 +158,6 @@ async function LogAllKnownPairings() {
     for (const cacheKey in pairingsByHostPortAndSteamId) {
 	const pairing = pairingsByHostPortAndSteamId[cacheKey];
 	console.log(cacheKey, pairing.token, pairing.consecutiveFailureCount, pairing.nextRetryTime);
-	const request = { getTime: {} };
-	const response = await rustplus.SendRequest(pairing.rustPlusClient, request);
-	console.log(response);
     }
 }
 
