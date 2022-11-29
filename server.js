@@ -68,33 +68,122 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Return the server cache record for a logged-in user's currently selected server.
+function GetSelectedServer(req) {
+    if (!req.user) {
+	return null;
+    }
+    const steamId = req.user.id;
+    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
+    if (pairs.length === 0) {
+	return null;
+    }
+    // Determine the selected server. If None, then pick an arbitrary server that
+    // the user is paired to.
+    let hostAndPort = req.session.selectedServer;
+    if (!hostAndPort) {
+	hostAndPort = pairs[0].serverHostAndPort;
+	req.session.selectedServer = hostAndPort;
+    }
+    const server = ServerCache.GetServerByHostAndPort(hostAndPort);
+    return server;
+}
+
+// Updates the information in the database and user cache based on
+// the latest user info provided in the request. Every time a logged-in
+// user loads a page that's a chance to update their user info.
+async function UpdateUserRecord(req) {
+    const user = await UserCache.GetUser(req.user);
+    if (user) {
+	await user.UpdateBasedOnSteamUserRecord(req.user);
+    }
+}
+
 // Landing page for non-logged=in users.
 app.get('/', (req, res) => {
-    if (req.user) {
-	res.redirect('/map');
+    if (!req.user) {
+	return res.sendFile('index.html', { root: 'static' });
+    }
+    const selected = GetSelectedServer(req);
+    if (selected) {
+	return res.redirect('/map');
     } else {
-	res.sendFile('index.html', { root: 'static' });
+	return res.redirect('/servers');
     }
 });
 
-// For debugging purposes. Log everything that's in the cache to the console.
-function LogCacheContents() {
+// Server selection and pairing page.
+app.get('/servers', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    res.sendFile('servers.html', { root: 'static' });
+});
+
+// Main map view.
+app.get('/map', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    res.sendFile('map.html', { root: 'static' });
+});
+
+// Cache keyed by host:port. Values have an expiry timestamp.
+// Example value { expiry: 1669671721164, data: '' }
+const cachedMapData = {};
+
+app.get('/mapdata', async (req, res) => {
+    if (!req.user) {
+	return res.json({});
+    }
+    const selected = GetSelectedServer(req);
+    if (!selected) {
+	return res.json({});
+    }
+    const currentTime = new Date().getTime();
+    const hostAndPort = selected.serverHostAndPort;
+    if (hostAndPort in cachedMapData) {
+	const cached = cachedMapData[hostAndPort];
+	if (currentTime < cached.expiry) {
+	    return res.json({ map: cached.data });
+	}
+    }
+    const steamId = req.user.id;
+    const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
+    const client = pair.rustPlusClient;
+    const request = { getMap: {} };
+    const response = await rustplus.SendRequest(client, request);
+    const map = response.response.map;
+    const tenMinutes = 1 * 60 * 1000;
+    cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
+    return res.json({ map });
+});
+
+app.get('/selectserver', async (req, res) => {
+    const host = req.query.host;
+    const port = req.query.port;
+    if (!req.user || !host || !port) {
+	return res.json({});
+    }
+    const hostAndPort = host + ':' + port;
+    req.session.selectedServer = hostAndPort;
+    return res.json({ selected: hostAndPort });
+});
+
+// For debugging purposes this endpoint causes the entire
+// cache to be logged to the console.
+app.get('/log', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    const user = await UserCache.GetUser(req.user);
+    await user.UpdateBasedOnSteamUserRecord(req.user);
     UserCache.LogAllUsers();
     ServerCache.LogAllKnownServers();
     ServerPairingCache.LogAllKnownPairings();
-}
-
-// The main app webpage for logged-in users.
-app.get('/map', async (req, res) => {
-    if (req.user) {
-	const user = await UserCache.GetUser(req.user);
-	await user.UpdateBasedOnSteamUserRecord(req.user);
-	console.log(user.steamId, user.steamName, user.avatar, user.profileUrl);
-	LogCacheContents();
-	res.sendFile('map.html', { root: 'static' });
-    } else {
-	res.redirect('/');
-    }
+    res.json({ ok: true });
 });
 
 // Serve static files.
@@ -261,35 +350,6 @@ app.post('/pair', (req, res) => {
     }
     const response = pairingStatusBySteamId[steamId] || { success: 'Follow the instructions to pair a server' };
     return res.json(response);
-});
-
-// Cache keyed by host:port. Values have an expiry timestamp.
-// Example value { expiry: 1669671721164, data: '' }
-const cachedMapData = {};
-
-app.get('/mapimage', async (req, res) => {
-    const host = req.query.host;
-    const port = req.query.port;
-    if (!req.user || !host || !port) {
-	return res.json({});
-    }
-    const currentTime = new Date().getTime();
-    const hostAndPort = host + ':' + port;
-    if (hostAndPort in cachedMapData) {
-	const cached = cachedMapData[hostAndPort];
-	if (currentTime < cached.expiry) {
-	    return res.json({ map: cached.data });
-	}
-    }
-    const steamId = req.user.id;
-    const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(host, port, steamId);
-    const client = pair.rustPlusClient;
-    const request = { getMap: {} };
-    const response = await rustplus.SendRequest(client, request);
-    const map = response.response.map;
-    const tenMinutes = 1 * 60 * 1000;
-    cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
-    return res.json({ map });
 });
 
 // Clean up when the process shuts down.

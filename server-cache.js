@@ -145,6 +145,10 @@ async function GetServerRecordFromPairingNotification(message) {
     }
 }
 
+function GetServerByHostAndPort(hostAndPort) {
+    return serversByHostAndPort[hostAndPort] || null;
+}
+
 // For debugging purposes, log all the servers to the console.
 function LogAllKnownServers() {
     const numServers = Object.keys(serversByHostAndPort).length;
@@ -156,6 +160,7 @@ function LogAllKnownServers() {
 }
 
 module.exports = {
+    GetServerByHostAndPort,
     GetServerRecordFromPairingNotification,
     Initialize,
     LogAllKnownServers,

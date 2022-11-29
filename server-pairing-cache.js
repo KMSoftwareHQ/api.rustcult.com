@@ -151,6 +151,17 @@ function GetPairingRecordFromHostPortAndSteamId(host, port, steamId) {
     }
 }
 
+// Returns a list of server pairing records for a steam ID.
+function GetAllPairingsForUser(steamId) {
+    const matches = [];
+    for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
+	if (pair.userSteamId === steamId) {
+	    matches.push(pair);
+	}
+    }
+    return matches;
+}
+
 // For debugging purposes, log all the server pairing records to the console.
 async function LogAllKnownPairings() {
     const numPairings = Object.keys(pairingsByHostPortAndSteamId).length;
@@ -162,6 +173,7 @@ async function LogAllKnownPairings() {
 }
 
 module.exports = {
+    GetAllPairingsForUser,
     GetPairingRecordFromPairingNotification,
     GetPairingRecordFromHostPortAndSteamId,
     Initialize,
