@@ -28,6 +28,7 @@
     "passport": "^0.6.0",
     "passport-steam": "^1.0.17",
     "push-receiver": "^2.1.1",
+    "rustplus-api": "^1.2.0",
     "uuid": "^9.0.0"
   }
 }

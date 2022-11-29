@@ -262,6 +262,27 @@ app.post('/pair', (req, res) => {
     return res.json(response);
 });
 
+// Cache keyed by host:port. Values have an expiry timestamp.
+// Example value { expiry: 1669671721164, data: '' }
+const cachedMapData = {};
+
+app.get('/mapimage', (req, res) => {
+    const host = req.params.host;
+    const port = req.params.port;
+    if (!host || !port) {
+	return res.json({});
+    }
+    const hostAndPort = host + ':' + port;
+    if (hostAndPort in cachedMapData) {
+	const cached = cachedMapData[hostAndPort];
+	const currentTime = new Data().getTime();
+	if (currentTime < cached.expiry) {
+	    return res.json({ mapImage: cached.data });
+	}
+    }
+    
+});
+
 // Clean up when the process shuts down.
 process.on('exit', () => {
     sessionStore.close();

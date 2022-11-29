@@ -1,5 +1,6 @@
 const db = require('./database');
 const moment = require('moment');
+const rustplus = require('./rustplus');
 
 class ServerPairing {
     constructor(databaseRow) {
@@ -8,6 +9,7 @@ class ServerPairing {
 	this.token = databaseRow.token;
 	this.consecutiveFailureCount = databaseRow.consecutive_failure_count;
 	this.nextRetryTime = databaseRow.next_retry_time;
+	this.rustPlusClient = null;
     }
 
     async SetToken(token) {
@@ -72,6 +74,16 @@ class ServerPairing {
 	    await this.SetToken(message.playerToken);
 	}
     }
+
+    async ConnectRustPlus() {
+	const tokens = this.serverHostAndPort.split(':');
+	if (tokens.length !== 2) {
+	    throw 'Server pairing with invalid host and port.';
+	}
+	const host = tokens[0];
+	const port = parseInt(tokens[1]);
+	this.rustPlusClient = await rustplus.Connect(host, port, this.userSteamId, this.token);
+    }
 }
 
 let pairingsByHostPortAndSteamId = {};
@@ -82,6 +94,7 @@ async function Initialize() {
     const results = await db.Query('SELECT * from server_pairings');
     for (const row of results) {
 	const pairing = new ServerPairing(row);
+	await pairing.ConnectRustPlus();
 	const cacheKey = pairing.serverHostAndPort + ':' + pairing.userSteamId;
 	newCache[cacheKey] = pairing;
     }
@@ -110,6 +123,7 @@ async function CreateNewPairingInDatabase(message) {
     }
     const row = results[0];
     const pairing = new ServerPairing(row);
+    await pairing.ConnectRustPlus();
     const cacheKey = pairing.serverHostAndPort + ':' + pairing.userSteamId;
     pairingsByHostPortAndSteamId[cacheKey] = pairing;
     return pairing;
@@ -128,12 +142,15 @@ async function GetPairingRecordFromPairingNotification(message) {
 }
 
 // For debugging purposes, log all the server pairing records to the console.
-function LogAllKnownPairings() {
+async function LogAllKnownPairings() {
     const numPairings = Object.keys(pairingsByHostPortAndSteamId).length;
     console.log(`All known server pairings (${numPairings})`);
     for (const cacheKey in pairingsByHostPortAndSteamId) {
 	const pairing = pairingsByHostPortAndSteamId[cacheKey];
 	console.log(cacheKey, pairing.token, pairing.consecutiveFailureCount, pairing.nextRetryTime);
+	const request = { getTime: {} };
+	const response = await rustplus.SendRequest(pairing.rustPlusClient, request);
+	console.log(response);
     }
 }
 
