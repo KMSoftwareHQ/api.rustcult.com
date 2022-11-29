@@ -8,6 +8,7 @@ const ParseHtml = require('./parse');
 const passport = require('passport');
 const passportSteam = require('passport-steam');
 const PushReceiver = require('push-receiver');
+const rustplus = require('./rustplus');
 const secrets = require('./secrets');
 const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
@@ -266,21 +267,29 @@ app.post('/pair', (req, res) => {
 // Example value { expiry: 1669671721164, data: '' }
 const cachedMapData = {};
 
-app.get('/mapimage', (req, res) => {
-    const host = req.params.host;
-    const port = req.params.port;
-    if (!host || !port) {
+app.get('/mapimage', async (req, res) => {
+    const host = req.query.host;
+    const port = req.query.port;
+    if (!req.user || !host || !port) {
 	return res.json({});
     }
+    const currentTime = new Date().getTime();
     const hostAndPort = host + ':' + port;
     if (hostAndPort in cachedMapData) {
 	const cached = cachedMapData[hostAndPort];
-	const currentTime = new Data().getTime();
 	if (currentTime < cached.expiry) {
-	    return res.json({ mapImage: cached.data });
+	    return res.json({ map: cached.data });
 	}
     }
-    
+    const steamId = req.user.id;
+    const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(host, port, steamId);
+    const client = pair.rustPlusClient;
+    const request = { getMap: {} };
+    const response = await rustplus.SendRequest(client, request);
+    const map = response.response.map;
+    const tenMinutes = 1 * 60 * 1000;
+    cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
+    return res.json({ map });
 });
 
 // Clean up when the process shuts down.

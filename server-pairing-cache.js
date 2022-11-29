@@ -141,6 +141,16 @@ async function GetPairingRecordFromPairingNotification(message) {
     }
 }
 
+function GetPairingRecordFromHostPortAndSteamId(host, port, steamId) {
+    const cacheKey = host + ':' + port + ':' + steamId;
+    const cachedPairing = pairingsByHostPortAndSteamId[cacheKey];
+    if (cachedPairing) {
+	return cachedPairing;
+    } else {
+	return null;
+    }
+}
+
 // For debugging purposes, log all the server pairing records to the console.
 async function LogAllKnownPairings() {
     const numPairings = Object.keys(pairingsByHostPortAndSteamId).length;
@@ -156,6 +166,7 @@ async function LogAllKnownPairings() {
 
 module.exports = {
     GetPairingRecordFromPairingNotification,
+    GetPairingRecordFromHostPortAndSteamId,
     Initialize,
     LogAllKnownPairings,
 };
