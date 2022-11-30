@@ -1,12 +1,3 @@
-let animatedEllipsis = '...';
-setInterval(() => {
-    if (animatedEllipsis.length >= 3) {
-	animatedEllipsis = '.';
-    } else {
-	animatedEllipsis += '.';
-    }
-}, 500);
-
 const pageSourceTextBox = document.getElementById('PastePageSourceHere');
 const serverPairingStatusLabel = document.getElementById('ServerPairingStatus');
 
@@ -66,5 +57,30 @@ function UpdateStatusLabel(jsonResponse) {
     } else if (jsonResponse.success) {
 	serverPairingStatusLabel.innerHTML = jsonResponse.success;
 	serverPairingStatusLabel.style.color = 'green';
+	UpdatePairedServerList();
     }
 }
+
+async function UpdatePairedServerList() {
+    const response = await fetch('/pairedservers');
+    const jsonResponse = await response.json();
+    const servers = jsonResponse.servers;
+    const ul = document.getElementById('pairedservers');
+    ul.innerHTML = '';
+    if (servers.length === 0) {
+	const li = document.createElement('li');
+	li.innerHTML = 'You have not yet paired any servers. Follow the instructions below to get started.';
+	ul.appendChild(li);
+    } else {
+	for (const server of servers) {
+	    const a = document.createElement('a');
+	    a.href = `/selectserver?host=${server.host}&port=${server.port}`;
+	    a.innerHTML = server.name;
+	    const li = document.createElement('li');
+	    li.appendChild(a);
+	    ul.appendChild(li);
+	}
+    }
+}
+
+UpdatePairedServerList();

@@ -143,7 +143,7 @@ app.get('/mapdata', async (req, res) => {
 	return res.json({});
     }
     const currentTime = new Date().getTime();
-    const hostAndPort = selected.serverHostAndPort;
+    const hostAndPort = selected.hostAndPort;
     if (hostAndPort in cachedMapData) {
 	const cached = cachedMapData[hostAndPort];
 	if (currentTime < cached.expiry) {
@@ -165,11 +165,33 @@ app.get('/selectserver', async (req, res) => {
     const host = req.query.host;
     const port = req.query.port;
     if (!req.user || !host || !port) {
-	return res.json({});
+	return res.redirect('/');
     }
     const hostAndPort = host + ':' + port;
     req.session.selectedServer = hostAndPort;
-    return res.json({ selected: hostAndPort });
+    return res.redirect('/map');
+});
+
+app.get('/pairedservers', (req, res) => {
+    if (!req.user) {
+	return res.json({});
+    }
+    const steamId = req.user.id;
+    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
+    const servers = [];
+    for (const pair of pairs) {
+	const server = ServerCache.GetServerByHostAndPort(pair.serverHostAndPort);
+	servers.push({
+	    hostAndPort: server.hostAndPort,
+	    host: server.host,
+	    port: server.port,
+	    name: server.name,
+	    description: server.description,
+	    logo: server.logo,
+	    consecutiveFailureCount: pair.consecutiveFailureCount,
+	});
+    }
+    return res.json({ servers });
 });
 
 // For debugging purposes this endpoint causes the entire
