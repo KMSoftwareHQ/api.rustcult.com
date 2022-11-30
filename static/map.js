@@ -1,4 +1,5 @@
-let cachedMapData = null;
+let cachedMapData;
+let mapImageTag;
 
 const mapCanvas = document.getElementById('mapcanvas');
 const mapContext = mapCanvas.getContext('2d');
@@ -7,6 +8,10 @@ function Draw() {
     const map = cachedMapData.map;
     mapContext.fillStyle = map.background;
     mapContext.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
+    const w = mapCanvas.width;
+    const h = mapCanvas.height;
+    const wh = Math.min(w, h);
+    mapContext.drawImage(mapImageTag, (w - wh) / 2, (h - wh) / 2, wh, wh);
 }
 
 function OnResize() {
@@ -22,7 +27,8 @@ async function Main() {
     const mapData = await response.json();
     cachedMapData = mapData;
     console.log(mapData);
-    //mapImageTag.src = 'data:image/png;base64, ' + mapData.map.jpgImage;
+    mapImageTag = document.createElement('img');
+    mapImageTag.src = 'data:image/png;base64, ' + mapData.map.jpgImage;
     OnResize();
 }
 
