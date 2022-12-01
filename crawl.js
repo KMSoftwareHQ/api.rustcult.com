@@ -120,6 +120,12 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	return users;
     }
     users.self = [self];
+    const inAlliance = false;
+    for (const ally of self.team) {
+	if (ally in allianceSteamIds) {
+	    inAlliance = true;
+	}
+    }
     const visibleIds = [userSteamId];
     users.team = [];
     for (const teamMemberId of self.team) {
@@ -136,25 +142,27 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
     if (users.team.length === 0) {
 	delete users.team;
     }
-    users.allies = [];
-    for (const allyId in serverCache) {
-	const ally = serverCache[allyId];
-	if (ally.steamId in allianceSteamIds) {
-	    for (const teamMemberId of ally.team) {
-		const teamMate = serverCache[teamMemberId];
-		if (!teamMate) {
-		    continue;
+    if (inAlliance) {
+	users.allies = [];
+	for (const allyId in serverCache) {
+	    const ally = serverCache[allyId];
+	    if (ally.steamId in allianceSteamIds) {
+		for (const teamMemberId of ally.team) {
+		    const teamMate = serverCache[teamMemberId];
+		    if (!teamMate) {
+			continue;
+		    }
+		    if (teamMate.steamId in visibleIds) {
+			continue;
+		    }
+		    visibleIds.push(teamMate.steamId);
+		    users.allies.push(teamMate);
 		}
-		if (teamMate.steamId in visibleIds) {
-		    continue;
-		}
-		visibleIds.push(teamMate.steamId);
-		users.allies.push(teamMate);
 	    }
 	}
-    }
-    if (users.allies.length === 0) {
-	delete users.allies;
+	if (users.allies.length === 0) {
+	    delete users.allies;
+	}
     }
     if (userSteamId in godModeSteamIds) {
 	users.enemies = [];
