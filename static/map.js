@@ -19,7 +19,24 @@ function Draw() {
     const w = mapCanvas.width;
     const h = mapCanvas.height;
     const wh = Math.min(w, h);
-    mapContext.drawImage(mapImageTag, (w - wh) / 2, (h - wh) / 2, wh, wh);
+    const mw = cachedMapData.map.width;
+    const mh = cachedMapData.map.height;
+    const oceanMargin = cachedMapData.map.oceanMargin;
+    mapContext.drawImage(mapImageTag, oceanMargin, oceanMargin, mw - 2 * oceanMargin, mh - 2 * oceanMargin, (w - wh) / 2, (h - wh) / 2, wh, wh);
+    const cx = w / 2;
+    const cy = h / 2;
+    const ox = cx - wh / 2;
+    const oy = cy + wh / 2;
+    const mapSize = 4500;
+    for (const monument of cachedMapData.map.monuments) {
+	const x = ox + wh * monument.x / mapSize;
+	const y = oy - wh * monument.y / mapSize;
+	console.log(x, y);
+	mapContext.fillStyle = '#0000FF';
+	mapContext.beginPath();
+	mapContext.arc(x, y, 3, 0, 2 * Math.PI);
+	mapContext.fill();
+    }
 }
 
 function OnResize() {
