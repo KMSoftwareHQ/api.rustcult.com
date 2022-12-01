@@ -99,6 +99,21 @@ setTimeout(DoCrawl, 10 * 1000);
 // on the map regardless of team relationships.
 const godModeSteamIds = [
     '76561198054245955',  // Jeff
+    '76561198017903507',  // Aperture
+    '76561198047845894',  // Scarrab
+    '76561199071658174',  // Hank
+    '76561197994436536',  // Waldo
+    '76561198078781532',  // Palm Tiger
+    '76561199115343874',  // Skyline
+    '76561198128787551',  // Lopt
+    '76561198028541529',  // Brett
+    '76561198371618376',  // Egon
+    '76561198259220001',  // Nikki
+    '76561198095439302',  // Mancrog
+    '76561197962102312',  // Kusstom
+    '76561198416046093',  // grimmjaune
+    '76561199357314454',  // Neff
+    '76561198040300329',  // Dannykuun
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -107,6 +122,30 @@ const godModeSteamIds = [
 // team-mates, like on the regular Rust+ map.
 const allianceSteamIds = [
     '76561198054245955',  // Jeff
+    '76561198017903507',  // Aperture
+    '76561198047845894',  // Scarrab
+    '76561199071658174',  // Hank
+    '76561198308992151',  // Quackatron
+    '76561197994436536',  // Waldo
+    '76561198078781532',  // Palm Tiger
+    '76561198405489221',  // Reefer
+    '76561199115343874',  // Skyline
+    '76561198128787551',  // Lopt
+    '76561198028541529',  // Brett
+    '76561198371618376',  // Egon
+    '76561198259220001',  // Nikki
+    '76561198095439302',  // Mancrog
+    '76561198910546860',  // PN
+    '76561199232233394',  // Vanguard
+    '76561197962102312',  // Kusstom
+    '76561198416046093',  // grimmjaune
+    '76561197960940977',  // Hudson
+    '76561198085482300',  // Lafter
+    '76561199350148648',  // Sage
+    '76561199357314454',  // Neff
+    '76561198054638760',  // N3xT
+    '76561198040300329',  // Dannykuun
+    '76561198120835721',  // Natefrog
 ];
 
 function GetVisibleUsers(serverHostAndPort, userSteamId) {
