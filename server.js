@@ -1,4 +1,5 @@
 // A third-party Rust+ web app that allows multiple teams to see each other on the map.
+const crawl = require('./crawl');
 const db = require('./database');
 const express = require('express');
 const fetch = require('node-fetch');
@@ -192,6 +193,19 @@ app.get('/pairedservers', (req, res) => {
 	});
     }
     return res.json({ servers });
+});
+
+app.get('/dots', (req, res) => {
+    if (!req.user) {
+	return res.json({});
+    }
+    const steamId = req.user.id;
+    const selected = GetSelectedServer(req);
+    if (!selected) {
+	return res.json({});
+    }
+    const dots = crawl.GetVisibleUsers(selected.hostAndPort, steamId);
+    return res.json({ dots });
 });
 
 // For debugging purposes this endpoint causes the entire

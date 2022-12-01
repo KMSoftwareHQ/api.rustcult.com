@@ -1,5 +1,6 @@
 let cachedMapData;
 let mapImageTag;
+let cachedDots;
 
 const mapCanvas = document.getElementById('mapcanvas');
 const mapContext = mapCanvas.getContext('2d');
@@ -36,14 +37,29 @@ function Draw() {
     // Bottom-left corner of map image. The "origin" for the Rust+ map coords.
     const ox = cx - wh / 2;
     const oy = cy + wh / 2;
-    for (const monument of map.monuments) {
-	const mapSize = 4500;
-	const x = ox + wh * monument.x / mapSize;
-	const y = oy - wh * monument.y / mapSize;
-	mapContext.fillStyle = '#0000FF';
-	mapContext.beginPath();
-	mapContext.arc(x, y, 3, 0, 2 * Math.PI);
-	mapContext.fill();
+    const mapSize = 4500;
+
+    function DrawDots(dots, color) {
+	if (!dots) {
+	    return;
+	}
+	mapContext.fillStyle = color;
+	for (const dot of dots) {
+	    const x = ox + wh * dot.x / mapSize;
+	    const y = oy - wh * dot.y / mapSize;
+	    mapContext.beginPath();
+	    mapContext.arc(x, y, 3, 0, 2 * Math.PI);
+	    mapContext.fill();
+	    //console.log(`Drawing ${color} at ${x} ${y}`);
+	}
+    }
+
+    DrawDots(map.monuments, '#888888');
+    if (cachedDots) {
+	console.log(cachedDots.team);
+	DrawDots(cachedDots.team, '#00FF88');
+	DrawDots(cachedDots.allies, '#8888FF');
+	DrawDots(cachedDots.enemies, '#FFCC88');
     }
 }
 
@@ -55,6 +71,18 @@ function OnResize() {
 
 window.addEventListener('resize', OnResize, false);
 
+async function FetchDots() {
+    const response = await fetch('/dots');
+    const jsonResponse = await response.json();
+    cachedDots = jsonResponse.dots;
+}
+
+async function PeriodicUpdate() {
+    await FetchDots();
+    Draw();
+    setTimeout(PeriodicUpdate, 1000);
+}
+
 async function Main() {
     const response = await fetch('/mapdata');
     const mapData = await response.json();
@@ -64,6 +92,7 @@ async function Main() {
     mapImageTag.src = 'data:image/png;base64, ' + mapData.map.jpgImage;
     await Sleep(100);
     OnResize();
+    PeriodicUpdate();
 }
 
 Main();
