@@ -59,14 +59,18 @@ async function TryToCrawlOnePair(pair) {
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
     console.log(`Updating ${members.length} users`);
+    //console.log(members);
     const teamIds = [];
     for (const member of members) {
 	const steamId = member.steamId.toString();
+	//console.log(steamId);
 	teamIds.push(steamId);
     }
+    //console.log('team:', teamIds);
     for (const member of members) {
+	const memberSteamId = member.steamId.toString();
 	const newCacheRecord = {
-	    steamId: member.steamId.toString(),
+	    steamId: memberSteamId,
 	    x: member.x,
 	    y: member.y,
 	    isOnline: member.isOnline,
@@ -76,7 +80,8 @@ async function TryToCrawlOnePair(pair) {
 	    team: teamIds,
 	    lastUpdateTime: currentTime,
 	};
-	UpdateCache(pair.serverHostAndPort, pair.userSteamId, newCacheRecord);
+	//console.log(pair.serverHostAndPort, pair.userSteamId, newCacheRecord);
+	UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
     }
 }
 
