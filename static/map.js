@@ -30,12 +30,14 @@ function Draw() {
 	mapImageTag,
 	om, om, mw - 2 * om, mh - 2 * om,
 	(w - wh) / 2, (h - wh) / 2, wh, wh);
+    // Center location.
     const cx = w / 2;
     const cy = h / 2;
+    // Bottom-left corner of map image. The "origin" for the Rust+ map coords.
     const ox = cx - wh / 2;
     const oy = cy + wh / 2;
-    const mapSize = 4500;
     for (const monument of map.monuments) {
+	const mapSize = 4500;
 	const x = ox + wh * monument.x / mapSize;
 	const y = oy - wh * monument.y / mapSize;
 	mapContext.fillStyle = '#0000FF';
