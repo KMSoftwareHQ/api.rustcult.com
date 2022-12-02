@@ -56,10 +56,9 @@ function Draw() {
 
     DrawDots(map.monuments, '#888888');
     if (cachedDots) {
-	console.log(cachedDots.team);
-	DrawDots(cachedDots.team, '#00FF88');
-	DrawDots(cachedDots.allies, '#8888FF');
 	DrawDots(cachedDots.enemies, '#FFCC88');
+	DrawDots(cachedDots.allies, '#8888FF');
+	DrawDots(cachedDots.team, '#00FF88');
     }
 }
 

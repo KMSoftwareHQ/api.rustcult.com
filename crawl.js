@@ -59,14 +59,11 @@ async function TryToCrawlOnePair(pair) {
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
     console.log(`Updating ${members.length} users`);
-    //console.log(members);
     const teamIds = [];
     for (const member of members) {
 	const steamId = member.steamId.toString();
-	//console.log(steamId);
 	teamIds.push(steamId);
     }
-    //console.log('team:', teamIds);
     for (const member of members) {
 	const memberSteamId = member.steamId.toString();
 	const newCacheRecord = {
@@ -80,7 +77,6 @@ async function TryToCrawlOnePair(pair) {
 	    team: teamIds,
 	    lastUpdateTime: currentTime,
 	};
-	//console.log(pair.serverHostAndPort, pair.userSteamId, newCacheRecord);
 	UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
     }
 }
@@ -98,7 +94,7 @@ async function DoCrawl() {
 }
 
 // Wait a few seconds before starting the crawl.
-setTimeout(DoCrawl, 10 * 1000);
+setTimeout(DoCrawl, 5 * 1000);
 
 // These users have God Mode enabled. They can see all other users' locations
 // on the map regardless of team relationships.
@@ -164,20 +160,20 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	return users;
     }
     users.self = [self];
-    const inAlliance = false;
+    let inAlliance = false;
     for (const ally of self.team) {
-	if (ally in allianceSteamIds) {
+	if (allianceSteamIds.includes(ally)) {
 	    inAlliance = true;
 	}
     }
-    const visibleIds = [userSteamId];
+    const visibleIds = [];
     users.team = [];
     for (const teamMemberId of self.team) {
 	const teamMate = serverCache[teamMemberId];
 	if (!teamMate) {
 	    continue;
 	}
-	if (teamMate.steamId in visibleIds) {
+	if (visibleIds.includes(teamMate.steamId)) {
 	    continue;
 	}
 	visibleIds.push(teamMate.steamId);
@@ -190,13 +186,13 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	users.allies = [];
 	for (const allyId in serverCache) {
 	    const ally = serverCache[allyId];
-	    if (ally.steamId in allianceSteamIds) {
+	    if (allianceSteamIds.includes(ally.steamId)) {
 		for (const teamMemberId of ally.team) {
 		    const teamMate = serverCache[teamMemberId];
 		    if (!teamMate) {
 			continue;
 		    }
-		    if (teamMate.steamId in visibleIds) {
+		    if (visibleIds.includes(teamMate.steamId)) {
 			continue;
 		    }
 		    visibleIds.push(teamMate.steamId);
@@ -208,14 +204,14 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	    delete users.allies;
 	}
     }
-    if (userSteamId in godModeSteamIds) {
+    if (godModeSteamIds.includes(userSteamId)) {
 	users.enemies = [];
 	for (const enemyId in serverCache) {
 	    const enemy = serverCache[enemyId];
 	    if (!enemy) {
 		continue;
 	    }
-	    if (enemy.steamId in visibleIds) {
+	    if (visibleIds.includes(enemy.steamId)) {
 		continue;
 	    }
 	    visibleIds.push(enemy.steamId);
