@@ -132,6 +132,11 @@ async function GetUser(reqUser) {
     }
 }
 
+// Gets a user from the database cache by steam ID.
+function GetUserBySteamId(steamId) {
+    return usersBySteamId[steamId] || null;
+}
+
 // For debugging purposes.
 function LogAllUsers() {
     const numUsers = Object.keys(usersBySteamId).length;
@@ -144,6 +149,7 @@ function LogAllUsers() {
 
 module.exports = {
     GetUser,
+    GetUserBySteamId,
     Initialize,
     LogAllUsers,
 };

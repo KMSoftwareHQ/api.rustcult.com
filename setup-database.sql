@@ -37,3 +37,12 @@ CREATE TABLE server_pairings (
   PRIMARY KEY (server_host_and_port, user_steam_id),
   UNIQUE (server_host_and_port, user_steam_id)
 );
+
+CREATE TABLE player_positions (
+  server_incrementing_id INT,
+  user_incrementing_id INT,
+  timestamp TIMESTAMP(0),
+  x FLOAT,
+  y FLOAT,
+  PRIMARY KEY (server_incrementing_id, user_incrementing_id, timestamp)
+);

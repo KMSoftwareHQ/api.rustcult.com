@@ -1,5 +1,8 @@
+const db = require('./database');
 const rustplus = require('./rustplus');
+const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
+const UserCache = require('./user-cache');
 
 // Each item in the cache is cached data from crawling a user.
 //
@@ -24,10 +27,69 @@ const ServerPairingCache = require('./server-pairing-cache');
 // }
 const cache = {};
 
+// This function gets called every time a significant user movement is detected.
+function OnUserMovement(before, after, server, user) {
+    const query = (
+	'REPLACE INTO player_positions ' +
+	'(server_incrementing_id, user_incrementing_id, timestamp, x, y) VALUES ' +
+	'(?, ?, CURRENT_TIMESTAMP, ?, ?)'
+    );
+    const values = [
+	server.incrementingId,
+	user.incrementingId,
+	after.x,
+	after.y,
+    ];
+    // Don't bother awaiting the results of the query. Fire and forget.
+    // The database is owned by the app owner so there is no issue with
+    // rate limits.
+    db.Query(query, values);
+}
+
+function IsNumber(value)
+{
+    return typeof value === 'number' && isFinite(value);
+}
+
+function DetectUserMovement(before, after, server, user) {
+    if (!before || !after || !server || !user) {
+	return;
+    }
+    if (!before.x || !before.y || !after.x || !after.y) {
+	return;
+    }
+    if (!IsNumber(before.x) || !IsNumber(before.y) ||
+	!IsNumber(after.x) || !IsNumber(after.y)) {
+	return;
+    }
+    const dx = after.x - before.x;
+    const dy = after.y - before.y;
+    const distanceSquared = dx * dx + dy * dy;
+    // Detect even tiny movements. We want to filter
+    // tiny floating-point rounding errors to prevent
+    // logging of spurious movements at the scale of Brownian motion.
+    const oneMillion = 1000 * 1000;
+    const oneMillionth = 1 / oneMillion;
+    const minDetectionDistance = oneMillionth;
+    const minDistSquared = minDetectionDistance * minDetectionDistance;
+    if (distanceSquared >= minDistSquared) {
+	OnUserMovement(before, after, server, user);
+    }
+}
+
+// Detect user movement, death, spawn, etc.
+function DetectUserEvents(before, after, server, user) {
+    DetectUserMovement(before, after, server, user);
+}
+
 function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {
     if (!(serverHostAndPort in cache)) {
 	cache[serverHostAndPort] = {};
     }
+    const oldCacheRecord = cache[serverHostAndPort][userSteamId];
+    const server = ServerCache.GetServerByHostAndPort(serverHostAndPort);
+    const user = UserCache.GetUserBySteamId(userSteamId);
+    DetectUserEvents(oldCacheRecord, newCacheRecord, server, user);
     cache[serverHostAndPort][userSteamId] = newCacheRecord;
 }
 
