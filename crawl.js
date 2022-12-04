@@ -277,7 +277,7 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 		continue;
 	    }
 	    visibleIds.push(enemy.steamId);
-	    users.allies.push(enemy);
+	    users.enemies.push(enemy);
 	}
     }
     return users;

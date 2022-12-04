@@ -39,26 +39,32 @@ function Draw() {
     const oy = cy + wh / 2;
     const mapSize = 4500;
 
-    function DrawDots(dots, color) {
+    function DrawDots(dots, borderColor, fillColor) {
 	if (!dots) {
 	    return;
 	}
-	mapContext.fillStyle = color;
+	mapContext.fillStyle = fillColor;
+	mapContext.strokeStyle = borderColor;
+	mapContext.lineWidth = 2;
 	for (const dot of dots) {
+	    const threshold = 0.001;
+	    if (Math.abs(dot.x) <= threshold && Math.abs(dot.y) <= threshold) {
+		continue;
+	    }
 	    const x = ox + wh * dot.x / mapSize;
 	    const y = oy - wh * dot.y / mapSize;
 	    mapContext.beginPath();
 	    mapContext.arc(x, y, 3, 0, 2 * Math.PI);
+	    mapContext.stroke();
 	    mapContext.fill();
-	    //console.log(`Drawing ${color} at ${x} ${y}`);
 	}
     }
 
-    DrawDots(map.monuments, '#888888');
+    DrawDots(map.monuments, '#db4437', 'rgba(234, 153, 153, 0.5)');
     if (cachedDots) {
-	DrawDots(cachedDots.enemies, '#FFCC88');
-	DrawDots(cachedDots.allies, '#8888FF');
-	DrawDots(cachedDots.team, '#00FF88');
+	DrawDots(cachedDots.enemies, '#FFF000', 'rgba(255, 240, 0, 0.8)');
+	DrawDots(cachedDots.allies, '#00FFF0', 'rgba(0, 255, 240, 0.8)');
+	DrawDots(cachedDots.team, '#00FF00', 'rgba(182, 215, 168, 0.8)');
     }
 }
 
