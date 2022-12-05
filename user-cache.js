@@ -65,7 +65,9 @@ class User {
 	if (reqUser.id !== this.steamId) {
 	    throw 'User steam IDs have to match to update a user record.';
 	}
-	await this.SetSteamName(reqUser.displayName);
+	if (reqUser.displayName) {
+	    await this.SetSteamName(reqUser.displayName);
+	}
 	const json = reqUser._json;
 	if (!json) {
 	    return;
@@ -122,7 +124,7 @@ async function CreateNewDatabaseUser(reqUser) {
 }
 
 // Gets a user from the database cache. If no user with the same ID exists, then one is created.
-async function GetUser(reqUser) {
+async function GetOrCreateUserFromSteamAuth(reqUser) {
     const steamId = reqUser.id;
     const cachedUser = usersBySteamId[steamId];
     if (cachedUser) {
@@ -132,7 +134,18 @@ async function GetUser(reqUser) {
     }
 }
 
-// Gets a user from the database cache by steam ID.
+// Gets a user from the database cache. If no user with the same ID exists, then one is created.
+async function GetOrCreateUserBySteamId(steamId) {
+    const cachedUser = usersBySteamId[steamId];
+    if (cachedUser) {
+	return cachedUser;
+    } else {
+	const fakeReqUser = { id: steamId };
+	return await CreateNewDatabaseUser(fakeReqUser);
+    }
+}
+
+// Gets a user from the database cache by steam ID. Return null if no such user exists.
 function GetUserBySteamId(steamId) {
     return usersBySteamId[steamId] || null;
 }
@@ -148,8 +161,9 @@ function LogAllUsers() {
 }
 
 module.exports = {
-    GetUser,
     GetUserBySteamId,
+    GetOrCreateUserBySteamId,
+    GetOrCreateUserFromSteamAuth,
     Initialize,
     LogAllUsers,
 };

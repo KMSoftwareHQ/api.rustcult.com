@@ -25,6 +25,9 @@ function OneOffRequest(serverPairingRecord, request) {
     const token = serverPairingRecord.token;
     return new Promise((resolve, reject) => {
 	const client = new RustPlus(host, port, steamId, token);
+	client.on('error', (error) => {
+	    reject(error);
+	});
 	client.on('connected', () => {
 	    // Some short delay is needed here to prevent an error with the
 	    // websocket not being ready or somesuch. The websocket complains

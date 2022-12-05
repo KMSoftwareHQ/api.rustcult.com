@@ -82,13 +82,13 @@ function DetectUserEvents(before, after, server, user) {
     DetectUserMovement(before, after, server, user);
 }
 
-function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {
+async function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {
     if (!(serverHostAndPort in cache)) {
 	cache[serverHostAndPort] = {};
     }
     const oldCacheRecord = cache[serverHostAndPort][userSteamId];
     const server = ServerCache.GetServerByHostAndPort(serverHostAndPort);
-    const user = UserCache.GetUserBySteamId(userSteamId);
+    const user = await UserCache.GetOrCreateUserBySteamId(userSteamId);
     DetectUserEvents(oldCacheRecord, newCacheRecord, server, user);
     cache[serverHostAndPort][userSteamId] = newCacheRecord;
 }
@@ -116,7 +116,16 @@ async function TryToCrawlOnePair(pair) {
     console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const client = pair.rustPlusClient;
     const request = { getTeamInfo: {} };
-    const response = await rustplus.OneOffRequest(pair, request);
+    let response;
+    try {
+	response = await rustplus.OneOffRequest(pair, request);
+    } catch (error) {
+	console.log(error);
+	return;
+    }
+    if (!response) {
+	return;
+    }
     const teamInfo = response.response.teamInfo;
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
@@ -139,7 +148,7 @@ async function TryToCrawlOnePair(pair) {
 	    team: teamIds,
 	    lastUpdateTime: currentTime,
 	};
-	UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
+	await UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
     }
 }
 

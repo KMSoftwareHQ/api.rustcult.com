@@ -94,7 +94,7 @@ function GetSelectedServer(req) {
 // the latest user info provided in the request. Every time a logged-in
 // user loads a page that's a chance to update their user info.
 async function UpdateUserRecord(req) {
-    const user = await UserCache.GetUser(req.user);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (user) {
 	await user.UpdateBasedOnSteamUserRecord(req.user);
     }
@@ -155,7 +155,14 @@ app.get('/mapdata', async (req, res) => {
     const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
     const client = pair.rustPlusClient;
     const request = { getMap: {} };
-    const response = await rustplus.OneOffRequest(pair, request);
+    let response;
+    try {
+	response = await rustplus.OneOffRequest(pair, request);
+    } catch (error) {
+	console.log('Error while retrieving map image from Rust+ API');
+	console.log(error);
+	return res.json({});
+    }
     const map = response.response.map;
     const tenMinutes = 1 * 60 * 1000;
     cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
@@ -214,7 +221,7 @@ app.get('/log', async (req, res) => {
     if (!req.user) {
 	return res.redirect('/');
     }
-    const user = await UserCache.GetUser(req.user);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     await user.UpdateBasedOnSteamUserRecord(req.user);
     UserCache.LogAllUsers();
     ServerCache.LogAllKnownServers();
