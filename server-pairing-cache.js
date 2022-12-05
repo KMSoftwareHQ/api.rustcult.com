@@ -94,7 +94,7 @@ async function Initialize() {
     const results = await db.Query('SELECT * from server_pairings');
     for (const row of results) {
 	const pairing = new ServerPairing(row);
-	await pairing.ConnectRustPlus();
+	//await pairing.ConnectRustPlus();
 	const cacheKey = pairing.serverHostAndPort + ':' + pairing.userSteamId;
 	newCache[cacheKey] = pairing;
     }

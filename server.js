@@ -155,7 +155,7 @@ app.get('/mapdata', async (req, res) => {
     const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
     const client = pair.rustPlusClient;
     const request = { getMap: {} };
-    const response = await rustplus.SendRequest(client, request);
+    const response = await rustplus.OneOffRequest(pair, request);
     const map = response.response.map;
     const tenMinutes = 1 * 60 * 1000;
     cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
@@ -395,12 +395,15 @@ process.on('exit', () => {
 });
 
 async function Main() {
+    console.log('Initializing caches.');
     await UserCache.Initialize();
     await ServerCache.Initialize();
     await ServerPairingCache.Initialize();
     // Start the https webserver.
+    console.log('Starting https.');
     https.createServer(secrets.sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
+    console.log('Starting http.');
     app.listen(80);
 }
 

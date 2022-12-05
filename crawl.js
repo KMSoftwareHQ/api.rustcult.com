@@ -116,7 +116,7 @@ async function TryToCrawlOnePair(pair) {
     console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const client = pair.rustPlusClient;
     const request = { getTeamInfo: {} };
-    const response = await rustplus.SendRequest(client, request);
+    const response = await rustplus.OneOffRequest(pair, request);
     const teamInfo = response.response.teamInfo;
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
