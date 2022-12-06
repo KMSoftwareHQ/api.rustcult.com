@@ -48,7 +48,7 @@ function Draw() {
 	}
 	const beforeAndAfter = {};
 	for (const dot of dots) {
-	    beforeAndAfter[dot.steamId] = { after: dot };
+	    beforeAndAfter[dot.steamId || dot.token] = { after: dot };
 	}
 	if (oldDots) {
 	    for (const dot of oldDots) {
@@ -77,7 +77,7 @@ function Draw() {
 	}
     }
 
-    DrawDots(map.monuments, '#db4437', 'rgba(234, 153, 153, 0.5)');
+    DrawDots(map.monuments, null, 1, '#db4437', 'rgba(234, 153, 153, 0.5)');
     if (cachedDots) {
 	const currentTime = new Date().getTime();
 	const timeFraction = (currentTime - 1000 - previousCachedDotsTime) / (cachedDotsTime - previousCachedDotsTime);
