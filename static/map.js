@@ -8,6 +8,14 @@ let previousCachedDotsTime;
 const mapCanvas = document.getElementById('mapcanvas');
 const mapContext = mapCanvas.getContext('2d');
 
+function hover(element) {
+    element.setAttribute('src', '/Hamburger-Icon-Green-Transparent.png');
+}
+
+function unhover(element) {
+    element.setAttribute('src', '/Hamburger-Icon-White-Transparent.png');
+}
+
 function Sleep(ms) {
     return new Promise((resolve, reject) => {
 	setTimeout(() => {

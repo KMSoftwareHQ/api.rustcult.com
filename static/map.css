@@ -8,3 +8,13 @@
     width: 100%;
     height: 100%;
 }
+
+#menu {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+}
+
+.menubutton {
+    width: 96px;
+}

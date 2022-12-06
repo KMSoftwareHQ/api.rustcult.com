@@ -3,7 +3,7 @@
   <head>
     <title>Rust+ Map</title>
     <link rel="stylesheet" href="map.css">
-     <meta http-equiv="refresh" content="3600">
+    <meta http-equiv="refresh" content="3600">
   </head>
   <body>
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-J039LC1ZSS"></script>
@@ -14,6 +14,16 @@
       gtag('config', 'G-J039LC1ZSS');
     </script>
     <canvas id="mapcanvas"></canvas>
+    <div id="menu">
+      <a href="/servers">
+	<img alt="Go to the server list"
+	     class="menubutton"
+	     onmouseover="hover(this);"
+	     onmouseout="unhover(this);"
+	     src="Hamburger-Icon-White-Transparent.png"
+	     />
+      </a>
+    </div>
     <script src="map.js"></script>
   </body>
 </html>
