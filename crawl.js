@@ -78,18 +78,17 @@ function DetectUserMovement(before, after, server, user) {
 }
 
 // Detect user movement, death, spawn, etc.
-function DetectUserEvents(before, after, server, user) {
+async function DetectUserEvents(before, after, server, user) {
     DetectUserMovement(before, after, server, user);
+    if (after.name) {
+	await user.SetSteamName(after.name);
+    }
 }
 
 async function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {
     if (!(serverHostAndPort in cache)) {
 	cache[serverHostAndPort] = {};
     }
-    const oldCacheRecord = cache[serverHostAndPort][userSteamId];
-    const server = ServerCache.GetServerByHostAndPort(serverHostAndPort);
-    const user = await UserCache.GetOrCreateUserBySteamId(userSteamId);
-    DetectUserEvents(oldCacheRecord, newCacheRecord, server, user);
     cache[serverHostAndPort][userSteamId] = newCacheRecord;
 }
 
@@ -105,9 +104,9 @@ function GetCache(serverHostAndPort, userSteamId) {
 
 async function TryToCrawlOnePair(pair) {
     const cacheRecord = GetCache(pair.serverHostAndPort, pair.userSteamId);
-    const currentTime = new Date().getTime();
+    const currentTimeA = new Date().getTime();
     if (cacheRecord) {
-	const age = currentTime - cacheRecord.lastUpdateTime;
+	const age = currentTimeA - cacheRecord.lastUpdateTime;
 	if (age < 1000) {
 	    // There is already a recent cache record. Bail.
 	    return;
@@ -129,26 +128,32 @@ async function TryToCrawlOnePair(pair) {
     const teamInfo = response.response.teamInfo;
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
+    const server = ServerCache.GetServerByHostAndPort(pair.serverHostAndPort);
     console.log(`Updating ${members.length} users`);
     const teamIds = [];
     for (const member of members) {
 	const steamId = member.steamId.toString();
 	teamIds.push(steamId);
     }
+    const currentTimeB = new Date().getTime();
     for (const member of members) {
 	const memberSteamId = member.steamId.toString();
 	const newCacheRecord = {
 	    steamId: memberSteamId,
 	    x: member.x,
 	    y: member.y,
+	    name: member.name,
 	    isOnline: member.isOnline,
 	    spawnTime: member.spawnTime,
 	    isAlive: member.isAlive,
 	    deathTime: member.deathTime,
 	    team: teamIds,
-	    lastUpdateTime: currentTime,
+	    lastUpdateTime: currentTimeB,
 	};
+	const oldCacheRecord = GetCache(pair.serverHostAndPort, memberSteamId);
 	await UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
+	const user = await UserCache.GetOrCreateUserBySteamId(memberSteamId);
+	await DetectUserEvents(oldCacheRecord, newCacheRecord, server, user);
     }
 }
 
