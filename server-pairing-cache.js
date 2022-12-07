@@ -115,6 +115,32 @@ async function CreateNewPairingInDatabase(message) {
     return pairing;
 }
 
+async function AssociateUserWithServerWithoutToken(serverHostAndPort, userSteamId) {
+    if (!userSteamId || !serverHostAndPort) {
+	throw 'Cannot create a server pairing without server and user IDs.';
+    }
+    console.log(`Creating new server pairing record in the database.`);
+    const currentTime = moment();
+    const query = (
+	'INSERT INTO server_pairings ' +
+	'(server_host_and_port, user_steam_id, token, consecutive_failure_count, next_retry_time) ' +
+	'VALUES (?, ?, NULL, ?, ?)'
+    );
+    const values = [serverHostAndPort, userSteamId, 0, currentTime.format()];
+    await db.Query(query, values);
+    const results = await db.Query(
+	'SELECT * FROM server_pairings where server_host_and_port = ? AND user_steam_id = ?',
+	[serverHostAndPort, userSteamId]);
+    if (results.length !== 1) {
+	throw 'Got back 2 matching server pairing records after creating a new database record. This should not happen.';
+    }
+    const row = results[0];
+    const pairing = new ServerPairing(row);
+    const cacheKey = pairing.serverHostAndPort + ':' + pairing.userSteamId;
+    pairingsByHostPortAndSteamId[cacheKey] = pairing;
+    return pairing;
+}
+
 // Gets a server pairing record from the database cache. If no record with
 // the same host, port, and SteamID exists, then one is created.
 async function GetPairingRecordFromPairingNotification(message) {
@@ -134,6 +160,16 @@ function GetPairingRecordFromHostPortAndSteamId(host, port, steamId) {
 	return cachedPairing;
     } else {
 	return null;
+    }
+}
+
+async function GetOrCreatePairingRecordFromHostPortAndSteamId(hostAndPort, steamId) {
+    const cacheKey = hostAndPort + ':' + steamId;
+    const cachedPairing = pairingsByHostPortAndSteamId[cacheKey];
+    if (cachedPairing) {
+	return cachedPairing;
+    } else {
+	return await AssociateUserWithServerWithoutToken(hostAndPort, steamId);
     }
 }
 
@@ -170,8 +206,9 @@ async function LogAllKnownPairings() {
 module.exports = {
     GetAllPairings,
     GetAllPairingsForUser,
-    GetPairingRecordFromPairingNotification,
+    GetOrCreatePairingRecordFromHostPortAndSteamId,
     GetPairingRecordFromHostPortAndSteamId,
+    GetPairingRecordFromPairingNotification,
     Initialize,
     LogAllKnownPairings,
 };

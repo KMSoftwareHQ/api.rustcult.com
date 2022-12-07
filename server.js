@@ -153,7 +153,13 @@ app.get('/mapdata', async (req, res) => {
     }
     const steamId = req.user.id;
     const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
-    const client = pair.rustPlusClient;
+    if (!pair.token) {
+	// TODO: make this work better by caching map data in the DB layer, not in memory.
+	if (hostAndPort in cachedMapData) {
+	    const cached = cachedMapData[hostAndPort];
+	    return res.json({ map: cached.data });
+	}
+    }
     const request = { getMap: {} };
     let response;
     try {

@@ -103,6 +103,10 @@ function GetCache(serverHostAndPort, userSteamId) {
 }
 
 async function TryToCrawlOnePair(pair) {
+    if (!pair || !pair.token) {
+	// This user is associated with this server but not paired. Skip crawling.
+	return;
+    }
     const cacheRecord = GetCache(pair.serverHostAndPort, pair.userSteamId);
     const currentTimeA = new Date().getTime();
     if (cacheRecord) {
@@ -154,6 +158,14 @@ async function TryToCrawlOnePair(pair) {
 	await UpdateCache(pair.serverHostAndPort, memberSteamId, newCacheRecord);
 	const user = await UserCache.GetOrCreateUserBySteamId(memberSteamId);
 	await DetectUserEvents(oldCacheRecord, newCacheRecord, server, user);
+	// Do nothing with this member pairing record. All this does is check if
+	// the team member has a pairing record and create a blank pairing record
+	// with no token if one doesn't exist. This lets those non-paired members
+	// see the map in the app even though they haven't paired.
+	const memberPairing = await ServerPairingCache.GetOrCreatePairingRecordFromHostPortAndSteamId(
+	    pair.serverHostAndPort,
+	    memberSteamId
+	);
     }
 }
 
