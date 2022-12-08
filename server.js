@@ -401,12 +401,6 @@ app.post('/pair', (req, res) => {
     return res.json(response);
 });
 
-// Clean up when the process shuts down.
-process.on('exit', () => {
-    sessionStore.close();
-    db.End();
-});
-
 async function Main() {
     console.log('Initializing caches.');
     await UserCache.Initialize();
@@ -421,3 +415,9 @@ async function Main() {
 }
 
 Main();
+
+// Clean up when the process shuts down.
+process.on('exit', () => {
+    sessionStore.close();
+    db.End();
+});
