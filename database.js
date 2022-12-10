@@ -25,6 +25,7 @@ function End() {
 }
 
 module.exports = {
+    End,
     GetConnection,
     Query,
 };

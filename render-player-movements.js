@@ -6,6 +6,7 @@
 // used for various purposes in the main map app.
 
 const { createCanvas, loadImage } = require('canvas');
+let d3 = import('d3-quadtree');
 const db = require('./database');
 const fs = require('fs');
 const secrets = require('./secrets');
@@ -13,13 +14,18 @@ const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const sql = 'SELECT * FROM player_positions WHERE server_incrementing_id = 3 ORDER BY timestamp';
+const serverIncrementingId = 3;
+const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
 let minX = 999999;
 let maxX = -999999;
 let minY = 999999;
 let maxY = -999999;
 let players = {};
+let colors = [];
+const userIds = [];
+const colorsByUserIncrementingId = {};
+let canvas, ctx;
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -50,7 +56,7 @@ async function PopulateEdges() {
     console.log(`Found ${Object.keys(players).length} distinct players.`);
 }
 
-function DrawLine(ctx, x1, y1, x2, y2, color) {
+function DrawLine(x1, y1, x2, y2, color) {
     const [r, g, b] = color;
     ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.1)`;
     ctx.beginPath();
@@ -121,15 +127,14 @@ function Shuffle(a) {
     return a;
 }
 
-async function Retrace(ctx) {
+async function Retrace() {
     const numColors = Object.keys(players).length;
-    const colors = GenerateRainbowColors(numColors);
+    colors = GenerateRainbowColors(numColors);
     Shuffle(colors);
     console.log('Querying the database for footprints.');
     const results = await db.Query(sql);
     console.log(`${results.length} footprints received. Rendering now.`);
     const prevRow = {};
-    const userIds = [];
     let rowCount = 0;
     for (const row of results) {
 	rowCount++;
@@ -141,6 +146,7 @@ async function Retrace(ctx) {
 	    userIds.push(userId);
 	}
 	const playerIndex = userIds.indexOf(userId);
+	colorsByUserIncrementingId[userId] = colors[playerIndex];
 	if (!row.x || !row.y) {
 	    continue;
 	}
@@ -154,7 +160,6 @@ async function Retrace(ctx) {
 	    const dist = Math.sqrt(dx * dx + dy * dy);
 	    if (dist < 50) {
 		DrawLine(
-		    ctx,
 		    prev.x - minX,
 		    maxY - prev.y,
 		    row.x - minX,
@@ -168,20 +173,143 @@ async function Retrace(ctx) {
     console.log('Done rendering.');
 }
 
+function CountNeighbors(tree, x, y, r) {
+    const rSquared = r * r;
+    const xmin = x - r;
+    const ymin = y - r;
+    const xmax = x + r;
+    const ymax = y + r;
+    let count = 0;
+    tree.visit((node, x1, y1, x2, y2) => {
+	if (!node.length) {
+	    do {
+		let d = node.data;
+		if (d[0] >= xmin && d[0] < xmax && d[1] >= ymin && d[1] < ymax) {
+		    const dx = x - d[0];
+		    const dy = y - d[1];
+		    const distanceSquared = dx * dx + dy * dy;
+		    if (distanceSquared < rSquared) {
+			count++;
+		    }
+		}
+	    } while (node = node.next);
+	}
+	return x1 >= xmax || y1 >= ymax || x2 < xmin || y2 < ymin;
+    });
+    return count;
+}
+
+function IsCloseToAny(p, neighbors, radius) {
+    const r2 = radius * radius;
+    for (const n of neighbors) {
+	const dx = n[0] - p.x;
+	const dy = n[1] - p.y;
+	const d2 = dx * dx + dy * dy;
+	if (d2 < r2) {
+	    return true;
+	}
+    }
+    return false;
+}
+
+function FindDensestPointExcludingCircles(points, centers, exclusionRadius) {
+    const tree = d3.quadtree();
+    for (const p of points) {
+	if (!IsCloseToAny(p, centers, exclusionRadius)) {
+	    tree.add([p.x, p.y]);
+	}
+    }
+    let maxNeighbors = -1;
+    let densestX;
+    let densestY;
+    const searchRadius = 3;
+    for (const p of points) {
+	if (IsCloseToAny(p, centers, exclusionRadius)) {
+	    continue;
+	}
+	const neighborCount = CountNeighbors(tree, p.x, p.y, searchRadius);
+	if (neighborCount > maxNeighbors) {
+	    maxNeighbors = neighborCount;
+	    densestX = p.x;
+	    densestY = p.y;
+	}
+    }
+    return [densestX, densestY, maxNeighbors];
+}
+
+async function FindBases(userIncrementingId) {
+    const points = await db.Query(
+	'SELECT x, y FROM player_positions ' +
+	'WHERE user_incrementing_id = ? AND server_incrementing_id = ?',
+	[userIncrementingId, serverIncrementingId],
+    );
+    const bases = [];
+    while (true) {
+	const base = FindDensestPointExcludingCircles(points, bases, 30);
+	if (!base) {
+	    break;
+	}
+	const x = base[0];
+	if (!x) {
+	    break;
+	}
+	const y = base[1];
+	const neighborCount = base[2];
+	const density = neighborCount / points.length;
+	const percent = (100 * density).toFixed(3);
+	if (density < 0.04) {
+	    break;
+	}
+	bases.push(base);
+    }
+    return bases;
+}
+
+function DrawCircle(x, y, color) {
+    const [r, g, b] = color;
+    //ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+    ctx.strokeStyle = `rgba(255, 255, 255, 1)`;
+    ctx.beginPath();
+    const radius = 10;
+    ctx.arc(x - minX, maxY - y, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+}
+
+async function DrawBases() {
+    console.log('Finding bases.');
+    for (const userIncrementingId in players) {
+	const bases = await FindBases(userIncrementingId);
+	console.log(`${userIncrementingId} has ${bases.length} bases.`);
+	const color = colorsByUserIncrementingId[userIncrementingId];
+	for (const base of bases) {
+	    console.log(base);
+	    const [x, y, density] = base;
+	    DrawCircle(x, y, color);
+	}
+    }
+}
+
+async function InitializeD3() {
+    d3 = await d3;
+}
+
 async function Main() {
+    await InitializeD3();
     await InitializeDatabaseCaches();
     await PopulateEdges();
     const width = maxX - minX;
     const height = maxY - minY;
-    const canvas = createCanvas(width, height);
-    const ctx = canvas.getContext('2d');
+    canvas = createCanvas(width, height);
+    ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     await Retrace(ctx);
+    await DrawBases(ctx);
     console.log('Outputting image.');
     const out = fs.createWriteStream('movement.png')
     const stream = canvas.createPNGStream();
     stream.pipe(out);
+    db.End();
     console.log('Done.');
 }
 
