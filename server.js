@@ -412,6 +412,11 @@ async function Main() {
     // Run an http webserver whose only job is to redirect http to https.
     console.log('Starting http.');
     app.listen(80);
+    const jeff = UserCache.GetUserBySteamId('76561198054245955');
+    console.log(jeff);
+    console.log(jeff.lastMovementTime);
+    console.log(jeff.lastBaseDetectionTime);
+    await jeff.SetLastMovementTime();
 }
 
 Main();

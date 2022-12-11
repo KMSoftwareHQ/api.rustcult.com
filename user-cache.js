@@ -1,4 +1,5 @@
 const db = require('./database');
+const moment = require('moment');
 
 class User {
     constructor(databaseRow) {
@@ -10,6 +11,8 @@ class User {
 	this.avatarMedium = databaseRow.avatar_medium;
 	this.avatarFull = databaseRow.avatar_full;
 	this.accountTimeCreated = databaseRow.account_time_created;
+	this.lastMovementTime = databaseRow.last_movement_time;
+	this.lastBaseDetectionTime = databaseRow.last_base_detection_time;
     }
 
     async SetSteamName(steamName) {
@@ -58,6 +61,16 @@ class User {
 	}
 	this.accountTimeCreated = accountTimeCreated;
 	await db.Query('UPDATE users SET account_time_created = ? WHERE steam_id = ?', [this.accountTimeCreated, this.steamId]);
+    }
+
+    async SetLastMovementTime() {
+	this.lastMovementTime = moment().format();
+	await db.Query('UPDATE users SET last_movement_time = ? WHERE steam_id = ?', [this.lastMovementTime, this.steamId]);
+    }
+
+    async SetLastBaseDetectionTime() {
+	this.lastBaseDetectionTime = moment().format();
+	await db.Query('UPDATE users SET last_base_detection_time = ? WHERE steam_id = ?', [this.lastBaseDetectionTime, this.steamId]);
     }
 
     // Updates the fields in this cached user, and also the database, based on the record of a logged-in Steam user.

@@ -28,7 +28,7 @@ const UserCache = require('./user-cache');
 const cache = {};
 
 // This function gets called every time a significant user movement is detected.
-function OnUserMovement(before, after, server, user) {
+async function OnUserMovement(before, after, server, user) {
     const query = (
 	'REPLACE INTO player_positions ' +
 	'(server_incrementing_id, user_incrementing_id, timestamp, x, y) VALUES ' +
@@ -43,7 +43,8 @@ function OnUserMovement(before, after, server, user) {
     // Don't bother awaiting the results of the query. Fire and forget.
     // The database is owned by the app owner so there is no issue with
     // rate limits.
-    db.Query(query, values);
+    await db.Query(query, values);
+    await user.SetLastMovementTime();
 }
 
 function IsNumber(value)
@@ -51,7 +52,7 @@ function IsNumber(value)
     return typeof value === 'number' && isFinite(value);
 }
 
-function DetectUserMovement(before, after, server, user) {
+async function DetectUserMovement(before, after, server, user) {
     if (!before || !after || !server || !user) {
 	return;
     }
@@ -73,13 +74,13 @@ function DetectUserMovement(before, after, server, user) {
     const minDetectionDistance = oneMillionth;
     const minDistSquared = minDetectionDistance * minDetectionDistance;
     if (distanceSquared >= minDistSquared) {
-	OnUserMovement(before, after, server, user);
+	await OnUserMovement(before, after, server, user);
     }
 }
 
 // Detect user movement, death, spawn, etc.
 async function DetectUserEvents(before, after, server, user) {
-    DetectUserMovement(before, after, server, user);
+    await DetectUserMovement(before, after, server, user);
     if (after.name) {
 	await user.SetSteamName(after.name);
     }
