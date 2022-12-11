@@ -263,7 +263,6 @@ async function FindBases(userIncrementingId) {
 	const density = neighborCount / points.length;
 	const percent = (100 * density).toFixed(3);
 	if (density < 0.04) {
-	    console.log(`Skipping base with density ${percent}%`);
 	    break;
 	}
 	bases.push(base);
@@ -271,9 +270,7 @@ async function FindBases(userIncrementingId) {
     return bases;
 }
 
-function DrawCircle(x, y, color) {
-    const [r, g, b] = color;
-    //ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
+function DrawCircle(x, y) {
     ctx.strokeStyle = `rgba(255, 255, 255, 1)`;
     ctx.beginPath();
     const radius = 10;
@@ -281,17 +278,72 @@ function DrawCircle(x, y, color) {
     ctx.stroke();
 }
 
-async function DrawBases() {
+function DistanceBetweenBases(a, b) {
+    const dx = a.x - b.x;
+    const dy = a.y - b.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+function GeometricMedian(bases) {
+    const n = bases.length;
+    let minDistance;
+    let median;
+    for (let i = 0; i < n; i++) {
+	let totalDistance = 0;
+	for (let j = 0; j < n; j++) {
+	    totalDistance += DistanceBetweenBases(bases[i], bases[j]);
+	}
+	if (!minDistance || totalDistance < minDistance) {
+	    minDistance = totalDistance;
+	    median = bases[i];
+	}
+    }
+    return median;
+}
+
+function CombineClusters(a, b) {
+    const residents = a.residents.concat(b.residents);
+    const median = GeometricMedian(residents);
+    return {
+	residents,
+	x: median.x,
+	y: median.y,
+	mainBase: a.mainBase || b.mainBase,
+    };
+}
+
+function Cluster(playerBases) {
+    const groupBases = [];
+    for (const base of playerBases) {
+	groupBases.push({
+	    residents: [base],
+	    x: base.x,
+	    y: base.y,
+	    mainBase: base.mainBase,
+	});
+    }
+    return playerBases;
+}
+
+async function DetectClusterAndDrawBases() {
     console.log('Finding bases.');
+    const playerBases = [];
     for (const userIncrementingId in players) {
 	const bases = await FindBases(userIncrementingId);
 	console.log(`${userIncrementingId} has ${bases.length} bases.`);
-	const color = colorsByUserIncrementingId[userIncrementingId];
+	let mainBase = true;
 	for (const base of bases) {
-	    console.log(base);
 	    const [x, y, density] = base;
-	    DrawCircle(x, y, color);
+	    playerBases.push({ userIncrementingId, x, y, density, mainBase });
+	    mainBase = false;
 	}
+    }
+    console.log('Clustering bases.');
+    const groupBases = Cluster(playerBases);
+    console.log('Drawing bases');
+    for (const base of groupBases) {
+	DrawCircle(base.x, base.y);
+	ctx.fillText(base.residents.length.toString(), base.x - minX, maxY - base.y);
     }
 }
 
@@ -310,7 +362,7 @@ async function Main() {
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     await Retrace(ctx);
-    await DrawBases(ctx);
+    await DetectClusterAndDrawBases(ctx);
     console.log('Outputting image.');
     const out = fs.createWriteStream('movement.png')
     const stream = canvas.createPNGStream();
