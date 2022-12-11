@@ -7,6 +7,8 @@ CREATE TABLE users (
   avatar_medium TEXT,
   avatar_full TEXT,
   account_time_created INT,
+  last_movement_time TIMESTAMP,
+  last_base_detection_time TIMESTAMP,
   PRIMARY KEY (incrementing_id),
   INDEX (steam_id),
   UNIQUE (steam_id)
@@ -45,4 +47,13 @@ CREATE TABLE player_positions (
   x FLOAT,
   y FLOAT,
   PRIMARY KEY (server_incrementing_id, user_incrementing_id, timestamp)
+);
+
+CREATE TABLE player_bases (
+  server_host_and_port VARCHAR(128),
+  user_steam_id VARCHAR(64),
+  x FLOAT,
+  y FLOAT,
+  density FLOAT,
+  INDEX (server_host_and_port, user_steam_id)
 );

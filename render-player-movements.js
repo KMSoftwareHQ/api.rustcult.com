@@ -244,6 +244,11 @@ async function FindBases(userIncrementingId) {
 	[userIncrementingId, serverIncrementingId],
     );
     const bases = [];
+    const n = points.length;
+    if (n < 500) {
+	// Not enough points to confidently identify bases. Bail.
+	return bases;
+    }
     while (true) {
 	const base = FindDensestPointExcludingCircles(points, bases, 30);
 	if (!base) {
@@ -258,6 +263,7 @@ async function FindBases(userIncrementingId) {
 	const density = neighborCount / points.length;
 	const percent = (100 * density).toFixed(3);
 	if (density < 0.04) {
+	    console.log(`Skipping base with density ${percent}%`);
 	    break;
 	}
 	bases.push(base);
