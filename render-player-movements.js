@@ -303,26 +303,74 @@ function GeometricMedian(bases) {
 
 function CombineClusters(a, b) {
     const residents = a.residents.concat(b.residents);
-    const median = GeometricMedian(residents);
+    const playerBases = a.playerBases.concat(b.playerBases);
+    const median = GeometricMedian(playerBases);
     return {
 	residents,
+	playerBases,
 	x: median.x,
 	y: median.y,
 	mainBase: a.mainBase || b.mainBase,
     };
 }
 
+function FullLinkageClusterDistance(a, b) {
+    let maxDistance = 0;
+    for (let i = 0; i < a.playerBases.length; i++) {
+	for (let j = 0; j < b.playerBases.length; j++) {
+	    const distance = DistanceBetweenBases(a.playerBases[i], b.playerBases[j]);
+	    maxDistance = Math.max(distance, maxDistance);
+	}
+    }
+    return maxDistance;
+}
+
+function FindClosestClusters(clusters) {
+    const n = clusters.length;
+    let bestI;
+    let bestJ;
+    let bestDistance;
+    for (let i = 0; i < n; i++) {
+	for (let j = i + 1; j < n; j++) {
+	    const distance = FullLinkageClusterDistance(clusters[i], clusters[j]);
+	    if (!bestDistance || distance < bestDistance) {
+		bestDistance = distance;
+		bestI = i;
+		bestJ = j;
+	    }
+	}
+    }
+    return [bestI, bestJ, bestDistance];
+}
+
 function Cluster(playerBases) {
     const groupBases = [];
     for (const base of playerBases) {
 	groupBases.push({
-	    residents: [base],
+	    residents: [base.userIncrementingId],
+	    playerBases: [base],
 	    x: base.x,
 	    y: base.y,
 	    mainBase: base.mainBase,
 	});
     }
-    return playerBases;
+    const maxClusterWidth = 27;
+    while (true) {
+	const [i, j, distance] = FindClosestClusters(groupBases);
+	console.log(`Closest clusters ${i} and ${j} with distance ${distance}`);
+	if (distance === undefined || distance === null) {
+	    break;
+	}
+	if (distance > maxClusterWidth) {
+	    break;
+	}
+	console.log('Merging');
+	const newCluster = CombineClusters(groupBases[i], groupBases[j]);
+	groupBases.splice(j, 1);
+	groupBases.splice(i, 1);
+	groupBases.push(newCluster);
+    }
+    return groupBases;
 }
 
 async function DetectClusterAndDrawBases() {
@@ -343,7 +391,8 @@ async function DetectClusterAndDrawBases() {
     console.log('Drawing bases');
     for (const base of groupBases) {
 	DrawCircle(base.x, base.y);
-	ctx.fillText(base.residents.length.toString(), base.x - minX, maxY - base.y);
+	ctx.fillStyle = `rgba(255, 255, 255, 1)`;
+	ctx.fillText(`${base.residents.length}`, base.x - minX, maxY - base.y);
     }
 }
 
