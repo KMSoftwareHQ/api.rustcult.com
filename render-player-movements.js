@@ -15,7 +15,7 @@ const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const serverIncrementingId = 1;
+const serverIncrementingId = 3;
 const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
 let minX = 999999;
@@ -183,6 +183,7 @@ function DrawCircle(x, y) {
 }
 
 async function DetectClusterAndDrawBases() {
+    await db.Query('DELETE FROM player_bases WHERE server_incrementing_id = ?', [serverIncrementingId]);
     console.log('Finding bases.');
     const playerBases = [];
     for (const userIncrementingId in players) {
@@ -192,6 +193,13 @@ async function DetectClusterAndDrawBases() {
 	for (const base of bases) {
 	    const [x, y, density] = base;
 	    playerBases.push({ userIncrementingId, x, y, density, mainBase });
+	    await db.Query(
+		'INSERT INTO player_bases ' +
+	        '(server_incrementing_id, user_incrementing_id, x, y, density, main_base) ' +
+		'VALUES ' +
+		'(?,?,?,?,?,?)',
+		[serverIncrementingId, userIncrementingId, x, y, density, mainBase],
+	    );
 	    mainBase = false;
 	}
     }

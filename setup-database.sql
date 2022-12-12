@@ -50,10 +50,11 @@ CREATE TABLE player_positions (
 );
 
 CREATE TABLE player_bases (
-  server_host_and_port VARCHAR(128),
-  user_steam_id VARCHAR(64),
+  server_incrementing_id INT NOT NULL,
+  user_incrementing_id INT NOT NULL,
   x FLOAT,
   y FLOAT,
   density FLOAT,
-  INDEX (server_host_and_port, user_steam_id)
+  main_base BOOLEAN,
+  INDEX (server_incrementing_id, user_incrementing_id)
 );
