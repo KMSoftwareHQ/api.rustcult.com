@@ -78,14 +78,14 @@ function Cluster(playerBases) {
     const maxClusterWidth = 27;
     while (true) {
 	const [i, j, distance] = FindClosestClusters(groupBases);
-	console.log(`Closest clusters ${i} and ${j} with distance ${distance}`);
+	//console.log(`Closest clusters ${i} and ${j} with distance ${distance}`);
 	if (distance === undefined || distance === null) {
 	    break;
 	}
 	if (distance > maxClusterWidth) {
 	    break;
 	}
-	console.log('Merging');
+	//console.log('Merging');
 	const newCluster = CombineClusters(groupBases[i], groupBases[j]);
 	groupBases.splice(j, 1);
 	groupBases.splice(i, 1);

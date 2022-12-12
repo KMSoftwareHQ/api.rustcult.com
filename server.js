@@ -1,4 +1,5 @@
 // A third-party Rust+ web app that allows multiple teams to see each other on the map.
+const cluster = require('./cluster');
 const crawl = require('./crawl');
 const db = require('./database');
 const express = require('express');
@@ -401,6 +402,60 @@ app.post('/pair', (req, res) => {
     return res.json(response);
 });
 
+let playerBasesByServer = {};
+let groupBasesByServer = {};
+
+async function UpdatePlayerBases() {
+    const query = (
+	'SELECT ' +
+	'  u.steam_id AS user_steam_id, ' +
+	'  u.incrementing_id AS user_incrementing_id, ' +
+	'  s.host_and_port AS server_host_and_port, ' +
+        '  s.incrementing_id AS server_incrementing_id, ' +
+	'  b.x AS x, ' +
+	'  b.y AS y, ' +
+	'  b.density AS density, ' +
+	'  b.main_base AS main_base ' +
+	'FROM player_bases b ' +
+	'INNER JOIN servers s ON b.server_incrementing_id = s.incrementing_id ' +
+        'INNER JOIN users u ON b.user_incrementing_id = u.incrementing_id'
+    );
+    const playerBases = await db.Query(query);
+    const newPlayerBaseCache = {};
+    for (const base of playerBases) {
+	const serverKey = base.server_host_and_port;
+	if (!(serverKey in newPlayerBaseCache)) {
+	    newPlayerBaseCache[serverKey] = [];
+	}
+	newPlayerBaseCache[serverKey].push({
+	    userIncrementingId: base.user_incrementing_id,
+	    userSteamId: base.user_steam_id,
+	    serverIncrementingId: base.server_incrementing_id,
+	    serverHostAndPort: base.server_host_and_port,
+	    x: base.x,
+	    y: base.y,
+	    density: base.density,
+	    mainBase: base.main_base,
+	});
+    }
+    playerBasesByServer = newPlayerBaseCache;
+}
+
+async function UpdateGroupBases() {
+    for (const serverKey in playerBasesByServer) {
+	const playerBases = playerBasesByServer[serverKey];
+	const groupBases = cluster.Cluster(playerBases);
+	console.log(`Clustering bases on server ${serverKey} ${playerBases.length} -> ${groupBases.length}`);
+	groupBasesByServer[serverKey] = groupBases;
+    }
+}
+
+async function UpdateBaseCacheFromDatabase() {
+    await UpdatePlayerBases();
+    await UpdateGroupBases();
+    setTimeout(UpdateBaseCacheFromDatabase, 60 * 1000);
+}
+
 async function Main() {
     console.log('Initializing caches.');
     await UserCache.Initialize();
@@ -412,11 +467,8 @@ async function Main() {
     // Run an http webserver whose only job is to redirect http to https.
     console.log('Starting http.');
     app.listen(80);
-    const jeff = UserCache.GetUserBySteamId('76561198054245955');
-    console.log(jeff);
-    console.log(jeff.lastMovementTime);
-    console.log(jeff.lastBaseDetectionTime);
-    await jeff.SetLastMovementTime();
+    // Start routinely updating the base cache with newly discovered bases.
+    setTimeout(UpdateBaseCacheFromDatabase, 10 * 1000);
 }
 
 Main();
