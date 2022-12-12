@@ -5,16 +5,17 @@
 // relationships amongst each other. It is that web of connections that is
 // used for various purposes in the main map app.
 
+const cluster = require('./cluster');
 const { createCanvas, loadImage } = require('canvas');
-let d3 = import('d3-quadtree');
 const db = require('./database');
+const findbases = require('./find-bases');
 const fs = require('fs');
 const secrets = require('./secrets');
 const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const serverIncrementingId = 3;
+const serverIncrementingId = 1;
 const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
 let minX = 999999;
@@ -173,103 +174,6 @@ async function Retrace() {
     console.log('Done rendering.');
 }
 
-function CountNeighbors(tree, x, y, r) {
-    const rSquared = r * r;
-    const xmin = x - r;
-    const ymin = y - r;
-    const xmax = x + r;
-    const ymax = y + r;
-    let count = 0;
-    tree.visit((node, x1, y1, x2, y2) => {
-	if (!node.length) {
-	    do {
-		let d = node.data;
-		if (d[0] >= xmin && d[0] < xmax && d[1] >= ymin && d[1] < ymax) {
-		    const dx = x - d[0];
-		    const dy = y - d[1];
-		    const distanceSquared = dx * dx + dy * dy;
-		    if (distanceSquared < rSquared) {
-			count++;
-		    }
-		}
-	    } while (node = node.next);
-	}
-	return x1 >= xmax || y1 >= ymax || x2 < xmin || y2 < ymin;
-    });
-    return count;
-}
-
-function IsCloseToAny(p, neighbors, radius) {
-    const r2 = radius * radius;
-    for (const n of neighbors) {
-	const dx = n[0] - p.x;
-	const dy = n[1] - p.y;
-	const d2 = dx * dx + dy * dy;
-	if (d2 < r2) {
-	    return true;
-	}
-    }
-    return false;
-}
-
-function FindDensestPointExcludingCircles(points, centers, exclusionRadius) {
-    const tree = d3.quadtree();
-    for (const p of points) {
-	if (!IsCloseToAny(p, centers, exclusionRadius)) {
-	    tree.add([p.x, p.y]);
-	}
-    }
-    let maxNeighbors = -1;
-    let densestX;
-    let densestY;
-    const searchRadius = 3;
-    for (const p of points) {
-	if (IsCloseToAny(p, centers, exclusionRadius)) {
-	    continue;
-	}
-	const neighborCount = CountNeighbors(tree, p.x, p.y, searchRadius);
-	if (neighborCount > maxNeighbors) {
-	    maxNeighbors = neighborCount;
-	    densestX = p.x;
-	    densestY = p.y;
-	}
-    }
-    return [densestX, densestY, maxNeighbors];
-}
-
-async function FindBases(userIncrementingId) {
-    const points = await db.Query(
-	'SELECT x, y FROM player_positions ' +
-	'WHERE user_incrementing_id = ? AND server_incrementing_id = ?',
-	[userIncrementingId, serverIncrementingId],
-    );
-    const bases = [];
-    const n = points.length;
-    if (n < 500) {
-	// Not enough points to confidently identify bases. Bail.
-	return bases;
-    }
-    while (true) {
-	const base = FindDensestPointExcludingCircles(points, bases, 30);
-	if (!base) {
-	    break;
-	}
-	const x = base[0];
-	if (!x) {
-	    break;
-	}
-	const y = base[1];
-	const neighborCount = base[2];
-	const density = neighborCount / points.length;
-	const percent = (100 * density).toFixed(3);
-	if (density < 0.04) {
-	    break;
-	}
-	bases.push(base);
-    }
-    return bases;
-}
-
 function DrawCircle(x, y) {
     ctx.strokeStyle = `rgba(255, 255, 255, 1)`;
     ctx.beginPath();
@@ -278,106 +182,11 @@ function DrawCircle(x, y) {
     ctx.stroke();
 }
 
-function DistanceBetweenBases(a, b) {
-    const dx = a.x - b.x;
-    const dy = a.y - b.y;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-function GeometricMedian(bases) {
-    const n = bases.length;
-    let minDistance;
-    let median;
-    for (let i = 0; i < n; i++) {
-	let totalDistance = 0;
-	for (let j = 0; j < n; j++) {
-	    totalDistance += DistanceBetweenBases(bases[i], bases[j]);
-	}
-	if (!minDistance || totalDistance < minDistance) {
-	    minDistance = totalDistance;
-	    median = bases[i];
-	}
-    }
-    return median;
-}
-
-function CombineClusters(a, b) {
-    const residents = a.residents.concat(b.residents);
-    const playerBases = a.playerBases.concat(b.playerBases);
-    const median = GeometricMedian(playerBases);
-    return {
-	residents,
-	playerBases,
-	x: median.x,
-	y: median.y,
-	mainBase: a.mainBase || b.mainBase,
-    };
-}
-
-function FullLinkageClusterDistance(a, b) {
-    let maxDistance = 0;
-    for (let i = 0; i < a.playerBases.length; i++) {
-	for (let j = 0; j < b.playerBases.length; j++) {
-	    const distance = DistanceBetweenBases(a.playerBases[i], b.playerBases[j]);
-	    maxDistance = Math.max(distance, maxDistance);
-	}
-    }
-    return maxDistance;
-}
-
-function FindClosestClusters(clusters) {
-    const n = clusters.length;
-    let bestI;
-    let bestJ;
-    let bestDistance;
-    for (let i = 0; i < n; i++) {
-	for (let j = i + 1; j < n; j++) {
-	    const distance = FullLinkageClusterDistance(clusters[i], clusters[j]);
-	    if (!bestDistance || distance < bestDistance) {
-		bestDistance = distance;
-		bestI = i;
-		bestJ = j;
-	    }
-	}
-    }
-    return [bestI, bestJ, bestDistance];
-}
-
-function Cluster(playerBases) {
-    const groupBases = [];
-    for (const base of playerBases) {
-	groupBases.push({
-	    residents: [base.userIncrementingId],
-	    playerBases: [base],
-	    x: base.x,
-	    y: base.y,
-	    mainBase: base.mainBase,
-	});
-    }
-    const maxClusterWidth = 27;
-    while (true) {
-	const [i, j, distance] = FindClosestClusters(groupBases);
-	console.log(`Closest clusters ${i} and ${j} with distance ${distance}`);
-	if (distance === undefined || distance === null) {
-	    break;
-	}
-	if (distance > maxClusterWidth) {
-	    break;
-	}
-	console.log('Merging');
-	const newCluster = CombineClusters(groupBases[i], groupBases[j]);
-	groupBases.splice(j, 1);
-	groupBases.splice(i, 1);
-	groupBases.push(newCluster);
-    }
-    return groupBases;
-}
-
 async function DetectClusterAndDrawBases() {
     console.log('Finding bases.');
     const playerBases = [];
     for (const userIncrementingId in players) {
-	const bases = await FindBases(userIncrementingId);
+	const bases = await findbases.FindBases(serverIncrementingId, userIncrementingId);
 	console.log(`${userIncrementingId} has ${bases.length} bases.`);
 	let mainBase = true;
 	for (const base of bases) {
@@ -387,7 +196,7 @@ async function DetectClusterAndDrawBases() {
 	}
     }
     console.log('Clustering bases.');
-    const groupBases = Cluster(playerBases);
+    const groupBases = cluster.Cluster(playerBases);
     console.log('Drawing bases');
     for (const base of groupBases) {
 	DrawCircle(base.x, base.y);
@@ -396,12 +205,7 @@ async function DetectClusterAndDrawBases() {
     }
 }
 
-async function InitializeD3() {
-    d3 = await d3;
-}
-
 async function Main() {
-    await InitializeD3();
     await InitializeDatabaseCaches();
     await PopulateEdges();
     const width = maxX - minX;
