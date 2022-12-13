@@ -92,7 +92,7 @@ async function FindBases(serverIncrementingId, userIncrementingId) {
 	const neighborCount = base[2];
 	const density = neighborCount / points.length;
 	const percent = (100 * density).toFixed(3);
-	if (density < 0.04) {
+	if (density < 0.03) {
 	    break;
 	}
 	bases.push(base);
