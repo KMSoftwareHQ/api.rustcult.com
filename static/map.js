@@ -9,7 +9,7 @@ const mapCanvas = document.getElementById('mapcanvas');
 const mapContext = mapCanvas.getContext('2d');
 
 function hover(element) {
-    element.setAttribute('src', '/Hamburger-Icon-Green-Transparent.png');
+    element.setAttribute('src', '/Hamburger-Icon--Transparent.png');
 }
 
 function unhover(element) {
@@ -85,15 +85,57 @@ function Draw() {
 	}
     }
 
+    function DrawSquare(x, y) {
+	const d = 6;
+	const r = d / 2;
+	mapContext.beginPath();
+	mapContext.rect(x - r, y - r, d, d);
+	mapContext.stroke();
+    }
+
+    function DrawTriangle(x, y) {
+	const s = 6;
+	mapContext.beginPath();
+	mapContext.moveTo(x - 0.5 * s, y + 0.289 * s);
+	mapContext.lineTo(x + 0.5 * s, y + 0.289 * s);
+	mapContext.lineTo(x, y - 0.577 * s);
+	mapContext.lineTo(x - 0.5 * s, y + 0.289 * s);
+	mapContext.stroke();
+    }
+
+    function DrawBases(bases, borderColor, fillColor) {
+	if (!bases) {
+	    return;
+	}
+	mapContext.fillStyle = fillColor;
+	mapContext.strokeStyle = borderColor;
+	mapContext.lineWidth = 2;
+	for (const base of bases) {
+	    const px = ox + wh * base.x / mapSize;
+	    const py = oy - wh * base.y / mapSize;
+	    if (base.mainBase) {
+		DrawSquare(px, py);
+	    } else {
+		DrawTriangle(px, py);
+	    }
+	}
+    }
+
     DrawDots(map.monuments, null, 1, '#db4437', 'rgba(234, 153, 153, 0.5)');
-    if (cachedDots) {
+    if (cachedDots && cachedDots.bases) {
+	DrawBases(cachedDots.bases.enemies, '#FFF000', 'rgba(255, 240, 0, 0.8)');
+	DrawBases(cachedDots.bases.allies, '#00FFF0', 'rgba(0, 255, 240, 0.8)');
+	DrawBases(cachedDots.bases.team, '#00FF00', 'rgba(182, 215, 168, 0.8)');
+	DrawBases(cachedDots.bases.self, '#00FF00', 'rgba(182, 215, 168, 0.8)');
+    }
+    if (cachedDots && cachedDots.users) {
 	const currentTime = new Date().getTime();
 	const timeFraction = (currentTime - 1000 - previousCachedDotsTime) / (cachedDotsTime - previousCachedDotsTime);
 	const alpha = Math.max(0, Math.min(1, timeFraction));
-	const prev = previousCachedDots || {};
-	DrawDots(cachedDots.enemies, prev.enemies, alpha, '#FFF000', 'rgba(255, 240, 0, 0.8)');
-	DrawDots(cachedDots.allies, prev.allies, alpha, '#00FFF0', 'rgba(0, 255, 240, 0.8)');
-	DrawDots(cachedDots.team, prev.team, alpha, '#00FF00', 'rgba(182, 215, 168, 0.8)');
+	const prev = (previousCachedDots || {}).users || {};
+	DrawDots(cachedDots.users.enemies, prev.enemies, alpha, '#FFF000', 'rgba(255, 240, 0, 0.8)');
+	DrawDots(cachedDots.users.allies, prev.allies, alpha, '#00FFF0', 'rgba(0, 255, 240, 0.8)');
+	DrawDots(cachedDots.users.team, prev.team, alpha, '#00FF00', 'rgba(182, 215, 168, 0.8)');
     }
 }
 
@@ -107,10 +149,9 @@ window.addEventListener('resize', OnResize, false);
 
 async function FetchDots() {
     const response = await fetch('/dots');
-    const jsonResponse = await response.json();
+    cachedDots = await response.json();
     previousCachedDots = cachedDots;
     previousCachedDotsTime = cachedDotsTime;
-    cachedDots = jsonResponse.dots;
     cachedDotsTime = new Date().getTime();
 }
 

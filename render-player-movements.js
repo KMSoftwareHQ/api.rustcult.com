@@ -15,7 +15,7 @@ const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const serverIncrementingId = 3;
+const serverIncrementingId = 1;
 const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
 let minX = 999999;

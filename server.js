@@ -218,8 +218,9 @@ app.get('/dots', (req, res) => {
     if (!selected) {
 	return res.json({});
     }
-    const dots = crawl.GetVisibleUsers(selected.hostAndPort, steamId);
-    return res.json({ dots });
+    const groupBases = groupBasesByServer[selected.hostAndPort] || [];
+    const dots = crawl.GetVisibleBasesAndUsers(selected.hostAndPort, steamId, groupBases);
+    return res.json(dots);
 });
 
 // For debugging purposes this endpoint causes the entire

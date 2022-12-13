@@ -238,17 +238,41 @@ const allianceSteamIds = [
     '76561198120835721',  // Natefrog
 ];
 
-function GetVisibleUsers(serverHostAndPort, userSteamId) {
+// Helper function that filters bases by owner. Adds the matching
+// bases to a given list, and returns the non-matching bases.
+function FilterBasesByOwner(groupBases, userSteamId, matches) {
+    const nonMatches = [];
+    for (const groupBase of groupBases) {
+	let match = false;
+	for (const playerBase of groupBase.playerBases) {
+	    if (playerBase.userSteamId === userSteamId) {
+		match = true;
+		break;
+	    }
+	}
+	if (match) {
+	    matches.push(groupBase);
+	} else {
+	    nonMatches.push(groupBase);
+	}
+    }
+    return nonMatches;
+}
+
+function GetVisibleBasesAndUsers(serverHostAndPort, userSteamId, groupBases) {
+    const bases = {};
     const users = {};
     if (!(serverHostAndPort in cache)) {
-	return users;
+	return { bases, users };
     }
     const serverCache = cache[serverHostAndPort];
     const self = serverCache[userSteamId];
     if (!self) {
-	return users;
+	return { bases, users };
     }
     users.self = [self];
+    bases.self = [];
+    groupBases = FilterBasesByOwner(groupBases, userSteamId, bases.self);
     let inAlliance = false;
     for (const ally of self.team) {
 	if (allianceSteamIds.includes(ally)) {
@@ -257,8 +281,10 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
     }
     const visibleIds = [];
     users.team = [];
+    bases.team = [];
     for (const teamMemberId of self.team) {
 	const teamMate = serverCache[teamMemberId];
+	groupBases = FilterBasesByOwner(groupBases, teamMemberId, bases.team);
 	if (!teamMate) {
 	    continue;
 	}
@@ -271,13 +297,18 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
     if (users.team.length === 0) {
 	delete users.team;
     }
+    if (bases.team.length === 0) {
+	delete bases.team;
+    }
     if (inAlliance) {
 	users.allies = [];
+	bases.allies = [];
 	for (const allyId in serverCache) {
 	    const ally = serverCache[allyId];
 	    if (allianceSteamIds.includes(ally.steamId)) {
 		for (const teamMemberId of ally.team) {
 		    const teamMate = serverCache[teamMemberId];
+		    groupBases = FilterBasesByOwner(groupBases, teamMemberId, bases.allies);
 		    if (!teamMate) {
 			continue;
 		    }
@@ -292,9 +323,13 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	if (users.allies.length === 0) {
 	    delete users.allies;
 	}
+	if (bases.allies.length === 0) {
+	    delete bases.allies;
+	}
     }
     if (godModeSteamIds.includes(userSteamId)) {
 	users.enemies = [];
+	bases.enemies = groupBases;
 	for (const enemyId in serverCache) {
 	    const enemy = serverCache[enemyId];
 	    if (!enemy) {
@@ -307,9 +342,9 @@ function GetVisibleUsers(serverHostAndPort, userSteamId) {
 	    users.enemies.push(enemy);
 	}
     }
-    return users;
+    return { bases, users };
 }
 
 module.exports = {
-    GetVisibleUsers,
+    GetVisibleBasesAndUsers,
 };
