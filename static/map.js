@@ -5,6 +5,8 @@ let cachedDotsTime;
 let previousCachedDots;
 let previousCachedDotsTime;
 
+const fullScreenButton = document.getElementById('fullscreenbutton');
+const fullScreenImg = document.getElementById('fullscreenimg');
 const mapCanvas = document.getElementById('mapcanvas');
 const mapContext = mapCanvas.getContext('2d');
 
@@ -15,6 +17,44 @@ function hover(element) {
 function unhover(element) {
     element.setAttribute('src', '/Hamburger-Icon-White-Transparent.png');
 }
+
+let prevFullscreenToggleTime = new Date().getTime();
+
+function ToggleFullScreen(event) {
+    event.preventDefault();
+    const currentTime = new Date().getTime();
+    if (currentTime - prevFullscreenToggleTime < 500) {
+	return false;
+    }
+    prevFullscreenToggleTime = currentTime;
+    const isFullScreen = (screen.availHeight || screen.height-30) <= window.innerHeight;
+    if (isFullScreen) {
+	fullScreenImg.src = 'fullscreen-on.png';
+	if (document.exitFullscreen) {
+	    document.exitFullscreen();
+	} else if (document.webkitExitFullscreen) { /* Safari */
+	    document.webkitExitFullscreen();
+	} else if (document.msExitFullscreen) { /* IE11 */
+	    document.msExitFullscreen();
+	}
+    } else {
+	fullScreenImg.src = 'fullscreen-off.png';
+	const doc = document.documentElement;
+	if (doc.requestFullscreen) {
+	    doc.requestFullscreen();
+	} else if (doc.webkitRequestFullscreen) { /* Safari */
+	    doc.webkitRequestFullscreen();
+	} else if (doc.msRequestFullscreen) { /* IE11 */
+	    doc.msRequestFullscreen();
+	}
+    }
+    return false;
+}
+
+fullScreenButton.addEventListener('click', ToggleFullScreen, false);
+fullScreenButton.addEventListener('touchstart', ToggleFullScreen, false);
+fullScreenButton.addEventListener('touchend', ToggleFullScreen, false);
+fullScreenButton.addEventListener('touchcancel', ToggleFullScreen, false);
 
 function Sleep(ms) {
     return new Promise((resolve, reject) => {

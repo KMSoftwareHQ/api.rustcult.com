@@ -16,5 +16,12 @@
 }
 
 .menubutton {
+    opacity: 0.5;
     width: 64px;
+}
+
+#fullscreen {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
 }
