@@ -130,6 +130,10 @@ async function TryToCrawlOnePair(pair) {
     if (!response) {
 	return;
     }
+    if (response.response.error) {
+	console.log(`Error while crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
+	return;
+    }
     const teamInfo = response.response.teamInfo;
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
