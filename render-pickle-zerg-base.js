@@ -56,7 +56,7 @@ async function PopulateEdges() {
 
 function DrawLine(x1, y1, x2, y2, color) {
     const [r, g, b] = color;
-    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.1)`;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.01)`;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -171,14 +171,6 @@ async function Retrace() {
     console.log('Done rendering.');
 }
 
-function DrawCircle(x, y) {
-    ctx.strokeStyle = `rgba(255, 255, 255, 1)`;
-    ctx.beginPath();
-    const radius = 10;
-    ctx.arc(x - minX, maxY - y, radius, 0, 2 * Math.PI);
-    ctx.stroke();
-}
-
 async function Main() {
     await InitializeDatabaseCaches();
     await PopulateEdges();
@@ -190,6 +182,7 @@ async function Main() {
     ctx = canvas.getContext('2d');
     ctx.fillStyle = 'black';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'lighter';
     await Retrace(ctx);
     console.log('Outputting image.');
     const out = fs.createWriteStream('movement.png')
