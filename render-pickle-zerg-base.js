@@ -125,6 +125,58 @@ function Shuffle(a) {
     return a;
 }
 
+// Can't use Math.sign(x) because Math.sign(0) === 0.
+const sgn = x => x < 0 ? -1 : 1;
+
+// Clamps a number to be between 0 and 1.
+const clamp = x => Math.min(Math.max(x, 0), 1);
+
+// Calculates the scalar multiplier from the projection
+// of one vector onto another. We don't need the
+// projected point itself, only the scalar.
+function ProjectionScalar(ax, ay, bx, by, b2) {
+    return (ax * bx + ay * by) / b2;
+}
+
+function LengthOfIntersectionBetweenLineSegmentAndCircle(x1, y1, x2, y2, cx, cy, r) {
+    // Transform the line segment so as to position the circle at the origin (0, 0)..
+    x1 -= cx;
+    y1 -= cy;
+    x2 -= cx;
+    y2 -= cy;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const dr2 = dx * dx + dy * dy;
+    const dr = Math.sqrt(dr2)
+    const D = x1 * y2 - x2 * y1;
+    const discriminant = r * r * dr2 - D * D;
+    if (discriminant <= 0) {
+	// Negative discriminant means the line does not intersect the circle.
+	return 0;
+    }
+    // If we get here, then the infinite line defined by the ends of the
+    // line segment intersects the circle somewhere. Not necessarily
+    // inside the line segment. Calculate the two intersection points.
+    const xOffset = sgn(dy) * dx * Math.sqrt(discriminant);
+    const yOffset = Math.abs(dy) * Math.sqrt(discriminant);
+    const invDr2 = 1 / (dr * dr);
+    const xa = (D * dy + xOffset) * invDr2;
+    const ya = (-D * dx + yOffset) * invDr2;
+    const xb = (D * dy - xOffset) * invDr2;
+    const yb = (-D * dx - yOffset) * invDr2;
+    // Calculate how much of the intersection lies between the endpoints
+    // of the line segment.
+    const aProj = ProjectionScalar(xa - x1, ya - y1, dx, dy, dr2);
+    const bProj = ProjectionScalar(xb - x1, yb - y1, dx, dy, dr2);
+    const minProj = Math.min(aProj, bProj);
+    const maxProj = Math.max(aProj, bProj);
+    const begin = clamp(minProj);
+    const end = clamp(maxProj);
+    const projDist = end - begin;
+    const intersectionLength = dr * projDist;
+    return intersectionLength;
+}
+
 async function Retrace() {
     const numColors = Object.keys(players).length;
     colors = GenerateRainbowColors(numColors);
