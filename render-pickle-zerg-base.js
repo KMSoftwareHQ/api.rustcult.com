@@ -15,15 +15,15 @@ const UserCache = require('./user-cache');
 const serverIncrementingId = 3;
 const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
-let minX = 999999;
-let maxX = -999999;
-let minY = 999999;
-let maxY = -999999;
+const minX = 2175.1975;
+const minY = 399.5207;
+const maxX = 2450.3975;
+const maxY = 623.5207;
 let players = {};
 let colors = [];
 const userIds = [];
-const colorsByUserIncrementingId = {};
 let canvas, ctx;
+let alpha;
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -33,30 +33,16 @@ async function InitializeDatabaseCaches() {
     console.log('Caches initialized.');
 }
 
-async function PopulateEdges() {
-    console.log('Querying the database for footprints.');
-    const results = await db.Query(sql);
-    console.log(`${results.length} footprints received. Determining edges.`);
-    for (const row of results) {
-	const x = row.x;
-	const y = row.y;
-	minX = Math.min(x, minX);
-	minY = Math.min(y, minY);
-	maxX = Math.max(x, maxX);
-	maxY = Math.max(y, maxY);
+async function PopulateEdges(footprints) {
+    for (const row of footprints) {
 	players[row.user_incrementing_id] = 1;
     }
-    minX = Math.floor(minX);
-    minY = Math.floor(minY);
-    maxX = Math.floor(maxX);
-    maxY = Math.floor(maxY);
-    console.log('Edges determined:', minX, minY, maxX, maxY);
     console.log(`Found ${Object.keys(players).length} distinct players.`);
 }
 
 function DrawLine(x1, y1, x2, y2, color) {
     const [r, g, b] = color;
-    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.01)`;
+    ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
     ctx.beginPath();
     ctx.moveTo(x1, y1);
     ctx.lineTo(x2, y2);
@@ -177,26 +163,14 @@ function LengthOfIntersectionBetweenLineSegmentAndCircle(x1, y1, x2, y2, cx, cy,
     return intersectionLength;
 }
 
-async function Retrace() {
-    const numColors = Object.keys(players).length;
-    colors = GenerateRainbowColors(numColors);
-    Shuffle(colors);
-    console.log('Querying the database for footprints.');
-    const results = await db.Query(sql);
-    console.log(`${results.length} footprints received. Rendering now.`);
+async function Retrace(footprints) {
     const prevRow = {};
-    let rowCount = 0;
-    for (const row of results) {
-	rowCount++;
-	if (rowCount % 1000 === 0) {
-	    console.log(`${rowCount} of ${results.length}`);
-	}
+    for (const row of footprints) {
 	const userId = row.user_incrementing_id;
 	if (!userIds.includes(userId)) {
 	    userIds.push(userId);
 	}
 	const playerIndex = userIds.indexOf(userId);
-	colorsByUserIncrementingId[userId] = colors[playerIndex];
 	if (!row.x || !row.y) {
 	    continue;
 	}
@@ -220,33 +194,34 @@ async function Retrace() {
 	}
 	prevRow[userId] = row;
     }
-    console.log('Done rendering.');
 }
 
 async function Main() {
+    console.log('Initializing.');
     await InitializeDatabaseCaches();
-    await PopulateEdges();
-    minX = 2175.1975;
-    minY = 399.5207;
-    maxX = 2450.3975;
-    maxY = 623.5207;
+    console.log('Querying the database for footprints.');
+    const footprints = await db.Query(sql);
+    console.log(`${footprints.length} footprints received.`);
+    await PopulateEdges(footprints);
+    const numColors = Object.keys(players).length;
+    colors = GenerateRainbowColors(numColors);
+    Shuffle(colors);
     canvas = createCanvas(5160, 4200);
     ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'black';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.globalCompositeOperation = 'lighter';
-    await Retrace(ctx);
-    console.log('Outputting image.');
-    const out = fs.createWriteStream('movement.png')
-    const stream = canvas.createPNGStream();
-    stream.pipe(out);
+    for (let i = 0; i <= 10; i++) {
+	alpha = (i / 1000).toFixed(3);
+	const filename = `pickle-zerg-${alpha}.png`;
+	console.log('Rendering', filename);
+	ctx.globalCompositeOperation = 'source-over';
+	ctx.fillStyle = 'black';
+	ctx.fillRect(0, 0, canvas.width, canvas.height);
+	ctx.globalCompositeOperation = 'lighter';
+	await Retrace(footprints);
+	const buffer = canvas.toBuffer('image/png');
+	fs.writeFileSync(filename, buffer);
+    }
     db.End();
     console.log('Done.');
 }
 
 Main();
-
-// Clean up when the process shuts down.
-process.on('exit', () => {
-    db.End();
-});
