@@ -8,6 +8,7 @@
 const { createCanvas, loadImage } = require('canvas');
 const db = require('./database');
 const fs = require('fs');
+const RandomSeed = require('random-seed');
 const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
@@ -24,6 +25,7 @@ let colors = [];
 const userIds = [];
 let canvas, ctx;
 let alpha;
+const rng = RandomSeed(12);
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -103,7 +105,7 @@ function GenerateRainbowColors(n) {
 function Shuffle(a) {
     var j, x, i;
     for (i = a.length - 1; i > 0; i--) {
-	j = Math.floor(Math.random() * (i + 1));
+	j = Math.floor(rng.random() * (i + 1));
 	x = a[i];
 	a[i] = a[j];
 	a[j] = x;
@@ -208,9 +210,9 @@ async function Main() {
     Shuffle(colors);
     canvas = createCanvas(5160, 4200);
     ctx = canvas.getContext('2d');
-    for (let i = 0; i <= 10; i++) {
-	alpha = (i / 1000).toFixed(3);
-	const filename = `pickle-zerg-${alpha}.png`;
+    for (let i = 32; i <= 32; i++) {
+	alpha = (i / 256).toFixed(4);
+	const filename = `pickle-zerg-${i}.png`;
 	console.log('Rendering', filename);
 	ctx.globalCompositeOperation = 'source-over';
 	ctx.fillStyle = 'black';
