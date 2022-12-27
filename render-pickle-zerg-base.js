@@ -213,7 +213,8 @@ async function Main() {
     const numColors = Object.keys(players).length;
     colors = GenerateRainbowColors(numColors);
     Shuffle(colors);
-    canvas = createCanvas(5160, 4200);
+    //canvas = createCanvas(5160, 4200);
+    canvas = createCanvas(7560, 6120);
     ctx = canvas.getContext('2d');
     const filename = `pickle-zerg-${seed}.png`;
     console.log('Rendering', filename);
