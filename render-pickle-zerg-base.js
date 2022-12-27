@@ -20,12 +20,17 @@ const minX = 2175.1975;
 const minY = 399.5207;
 const maxX = 2450.3975;
 const maxY = 623.5207;
+//const minX = 2220.65;
+//const minY = 436.52;
+//const maxX = 2404.94;
+//const maxY = 586.52;
+const seed = process.argv[process.argv.length - 1] || '123';
+const rng = RandomSeed(seed);
 let players = {};
 let colors = [];
 const userIds = [];
 let canvas, ctx;
-let alpha;
-const rng = RandomSeed(12);
+const alpha = '0.125';
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -199,7 +204,7 @@ async function Retrace(footprints) {
 }
 
 async function Main() {
-    console.log('Initializing.');
+    console.log('seed', seed);
     await InitializeDatabaseCaches();
     console.log('Querying the database for footprints.');
     const footprints = await db.Query(sql);
@@ -210,18 +215,15 @@ async function Main() {
     Shuffle(colors);
     canvas = createCanvas(5160, 4200);
     ctx = canvas.getContext('2d');
-    for (let i = 32; i <= 32; i++) {
-	alpha = (i / 256).toFixed(4);
-	const filename = `pickle-zerg-${i}.png`;
-	console.log('Rendering', filename);
-	ctx.globalCompositeOperation = 'source-over';
-	ctx.fillStyle = 'black';
-	ctx.fillRect(0, 0, canvas.width, canvas.height);
-	ctx.globalCompositeOperation = 'lighter';
-	await Retrace(footprints);
-	const buffer = canvas.toBuffer('image/png');
-	fs.writeFileSync(filename, buffer);
-    }
+    const filename = `pickle-zerg-${seed}.png`;
+    console.log('Rendering', filename);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.globalCompositeOperation = 'lighter';
+    await Retrace(footprints);
+    const buffer = canvas.toBuffer('image/png');
+    fs.writeFileSync(filename, buffer);
     db.End();
     console.log('Done.');
 }
