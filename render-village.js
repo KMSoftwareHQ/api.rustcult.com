@@ -16,18 +16,18 @@ const UserCache = require('./user-cache');
 const serverIncrementingId = 1;
 const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
 
-const minX = 1818;
-const minY = 2218;
-const maxX = 2806;
-const maxY = 3018;
+const minX = 2084;
+const minY = 2561;
+const maxX = 2529;
+const maxY = 2921;
 const seed = process.argv[process.argv.length - 1] || '123';
 const rng = RandomSeed(seed);
 let players = {};
 let colors = [];
 const userIds = [];
 let canvas, ctx;
-//const alpha = '0.125';
-const alpha = '0.2';
+const alpha = '0.125';
+//const alpha = '0.2';
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -210,8 +210,8 @@ async function Main() {
     const numColors = Object.keys(players).length;
     colors = GenerateRainbowColors(numColors);
     Shuffle(colors);
-    //canvas = createCanvas(5160, 4200);  // 20x16 inches at 240 DPI with 3/4 inch border.
-    canvas = createCanvas(7560, 6120);  // 30x24 inches at 240 DPI with 3/4 inch border.
+    canvas = createCanvas(5160, 4200);  // 20x16 inches at 240 DPI with 3/4 inch border.
+    //canvas = createCanvas(7560, 6120);  // 30x24 inches at 240 DPI with 3/4 inch border.
     ctx = canvas.getContext('2d');
     const filename = `village-${seed}.png`;
     console.log('Rendering', filename);

@@ -30,7 +30,8 @@ let players = {};
 let colors = [];
 const userIds = [];
 let canvas, ctx;
-const alpha = '0.125';
+//const alpha = '0.125';
+const alpha = '0.2';
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
