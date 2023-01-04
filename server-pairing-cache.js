@@ -31,6 +31,9 @@ class ServerPairing {
 	await db.Query(
 	    'UPDATE server_pairings SET consecutive_failure_count = ? WHERE server_host_and_port = ? AND user_steam_id = ?',
 	    [this.consecutiveFailureCount, this.serverHostAndPort, this.userSteamId]);
+	if (consecutiveFailureCount === 0) {
+	    await this.SetNextRetryTime(null);
+	}
     }
 
     async SetNextRetryTime(nextRetryTime) {

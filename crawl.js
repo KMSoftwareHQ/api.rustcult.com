@@ -1,4 +1,5 @@
 const db = require('./database');
+const moment = require('moment');
 const rustplus = require('./rustplus');
 const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
@@ -117,8 +118,14 @@ async function TryToCrawlOnePair(pair) {
 	    return;
 	}
     }
+    if (pair.nextRetryTime) {
+	// If this pair has had errors recently then it might have a cooldown time.
+	const retryTime = moment(pair.nextRetryTime);
+	if (retryTime.isAfter(moment())) {
+	    return;
+	}
+    }
     console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
-    const client = pair.rustPlusClient;
     const request = { getTeamInfo: {} };
     let response;
     try {

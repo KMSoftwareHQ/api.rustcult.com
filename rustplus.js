@@ -12,7 +12,8 @@ function OneOffRequest(serverPairingRecord, request) {
     const token = serverPairingRecord.token;
     return new Promise((resolve, reject) => {
 	const client = new RustPlus(host, port, steamId, token);
-	client.on('error', (error) => {
+	client.on('error', async (error) => {
+	    await serverPairingRecord.IncrementFailureCount();
 	    reject(error);
 	});
 	client.on('connected', () => {
@@ -20,13 +21,14 @@ function OneOffRequest(serverPairingRecord, request) {
 	    // websocket not being ready or somesuch. The websocket complains
 	    // about its status and waiting a short while seems to sort it out.
 	    setTimeout(() => {
-		client.sendRequest(request, (response) => {
+		client.sendRequest(request, async (response) => {
 		    if (client.websocket) {
 			client.websocket.terminate();
 			client.websocket = null;
 		    } else {
 			console.log('Websocket not open. This might indicate a problem.');
 		    }
+		    await serverPairingRecord.SetConsecutiveFailureCount(0);
 		    resolve(response);
 		});
 	    }, 1);
