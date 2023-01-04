@@ -454,7 +454,7 @@ async function UpdateGroupBases() {
 async function UpdateBaseCacheFromDatabase() {
     await UpdatePlayerBases();
     await UpdateGroupBases();
-    setTimeout(UpdateBaseCacheFromDatabase, 60 * 1000);
+    setTimeout(UpdateBaseCacheFromDatabase, 10 * 60 * 1000);
 }
 
 async function Main() {
