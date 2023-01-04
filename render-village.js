@@ -13,8 +13,11 @@ const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const serverIncrementingId = 1;
-const sql = `SELECT * FROM player_positions WHERE server_incrementing_id = ${serverIncrementingId} ORDER BY timestamp`;
+const sql = (
+    'SELECT * FROM player_positions ' +
+    'WHERE server_incrementing_id = 1 ' +
+    'ORDER BY user_incrementing_id, timestamp'
+);
 
 const minX = 2084;
 const minY = 2561;
@@ -44,13 +47,9 @@ async function PopulateEdges(footprints) {
     console.log(`Found ${Object.keys(players).length} distinct players.`);
 }
 
-function DrawLine(x1, y1, x2, y2, color) {
+function SetStrokeColor(color) {
     const [r, g, b] = color;
     ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
 }
 
 function InterpolateTwoColors(a, b, ratio) {
@@ -128,61 +127,26 @@ function ProjectionScalar(ax, ay, bx, by, b2) {
     return (ax * bx + ay * by) / b2;
 }
 
-function LengthOfIntersectionBetweenLineSegmentAndCircle(x1, y1, x2, y2, cx, cy, r) {
-    // Transform the line segment so as to position the circle at the origin (0, 0)..
-    x1 -= cx;
-    y1 -= cy;
-    x2 -= cx;
-    y2 -= cy;
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    const dr2 = dx * dx + dy * dy;
-    const dr = Math.sqrt(dr2)
-    const D = x1 * y2 - x2 * y1;
-    const discriminant = r * r * dr2 - D * D;
-    if (discriminant <= 0) {
-	// Negative discriminant means the line does not intersect the circle.
-	return 0;
-    }
-    // If we get here, then the infinite line defined by the ends of the
-    // line segment intersects the circle somewhere. Not necessarily
-    // inside the line segment. Calculate the two intersection points.
-    const xOffset = sgn(dy) * dx * Math.sqrt(discriminant);
-    const yOffset = Math.abs(dy) * Math.sqrt(discriminant);
-    const invDr2 = 1 / (dr * dr);
-    const xa = (D * dy + xOffset) * invDr2;
-    const ya = (-D * dx + yOffset) * invDr2;
-    const xb = (D * dy - xOffset) * invDr2;
-    const yb = (-D * dx - yOffset) * invDr2;
-    // Calculate how much of the intersection lies between the endpoints
-    // of the line segment.
-    const aProj = ProjectionScalar(xa - x1, ya - y1, dx, dy, dr2);
-    const bProj = ProjectionScalar(xb - x1, yb - y1, dx, dy, dr2);
-    const minProj = Math.min(aProj, bProj);
-    const maxProj = Math.max(aProj, bProj);
-    const begin = clamp(minProj);
-    const end = clamp(maxProj);
-    const projDist = end - begin;
-    const intersectionLength = dr * projDist;
-    return intersectionLength;
-}
-
 async function Retrace(footprints) {
-    const prevRow = {};
+    let prev;
     for (const row of footprints) {
 	const userId = row.user_incrementing_id;
 	if (!userIds.includes(userId)) {
 	    userIds.push(userId);
 	}
 	const playerIndex = userIds.indexOf(userId);
+	const color = colors[playerIndex];
+	SetStrokeColor(color);
 	if (!row.x || !row.y) {
 	    continue;
 	}
 	if (Math.abs(row.x) < 0.001 && Math.abs(row.y) < 0.001) {
 	    continue;
 	}
-	const prev = prevRow[userId];
-	if (prev) {
+	if (!prev) {
+	    ctx.beginPath();
+	    ctx.moveTo(row.x, row.y);
+	} else if (prev.user_incrementing_id === userId) {
 	    const dx = row.x - prev.x;
 	    const dy = row.y - prev.y;
 	    const dist = Math.sqrt(dx * dx + dy * dy);
@@ -196,7 +160,7 @@ async function Retrace(footprints) {
 		);
 	    }
 	}
-	prevRow[userId] = row;
+	prev = row;
     }
 }
 
