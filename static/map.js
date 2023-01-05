@@ -70,6 +70,7 @@ function Draw() {
 	return;
     }
     const map = cachedMapData.map;
+    const info = cachedMapData.info;
     mapContext.fillStyle = map.background;
     mapContext.fillRect(0, 0, mapCanvas.width, mapCanvas.height);
     const w = mapCanvas.width;
@@ -88,7 +89,7 @@ function Draw() {
     // Bottom-left corner of map image. The "origin" for the Rust+ map coords.
     const ox = cx - wh / 2;
     const oy = cy + wh / 2;
-    const mapSize = 4500;
+    const mapSize = parseInt(info.mapSize || 4250);
 
     function DrawDots(dots, oldDots, alpha, borderColor, fillColor) {
 	if (!dots) {

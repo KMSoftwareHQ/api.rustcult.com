@@ -141,7 +141,6 @@ app.get('/mapdata', async (req, res) => {
     if (!selected) {
 	return res.json({});
     }
-    const hostAndPort = selected.hostAndPort;
     let info;
     try {
 	info = JSON.parse(selected.infoJson);
@@ -189,6 +188,10 @@ app.get('/mapdata', async (req, res) => {
     info = response.response.info;
     const infoJson = JSON.stringify(info);
     await selected.SetInfoJson(infoJson);
+    if (info.mapSize) {
+	const mapSize = parseInt(info.mapSize);
+	await selected.SetMapSize(mapSize);
+    }
     return res.json({ info, map });
 });
 
