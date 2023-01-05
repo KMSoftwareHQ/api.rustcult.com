@@ -1,4 +1,5 @@
 const db = require('./database');
+const moment = require('moment');
 
 class Server {
     constructor(databaseRow) {
@@ -12,6 +13,10 @@ class Server {
 	this.id = databaseRow.id;
 	this.url = databaseRow.url;
 	this.description = databaseRow.description;
+	this.mapImageUpdateTime = databaseRow.map_image_update_time;
+	this.mapSize = databaseRow.map_size;
+	this.mapJson = databaseRow.get_map_json;
+	this.infoJson = databaseRow.get_info_json;
     }
 
     async SetName(name) {
@@ -60,6 +65,40 @@ class Server {
 	}
 	this.description = description;
 	await db.Query('UPDATE servers SET description = ? WHERE host_and_port = ?', [this.description, this.hostAndPort]);
+    }
+
+    async SetMapImageUpdateTime(mapImageUpdateTime) {
+	if (mapImageUpdateTime === this.mapImageUpdateTime) {
+	    return;
+	}
+	this.mapImageUpdateTime = mapImageUpdateTime;
+	await db.Query('UPDATE servers SET map_image_update_time = ? WHERE host_and_port = ?', [this.mapImageUpdateTime, this.hostAndPort]);
+    }
+
+    async SetMapSize(mapSize) {
+	if (mapSize === this.mapSize) {
+	    return;
+	}
+	this.mapSize = mapSize;
+	await db.Query('UPDATE servers SET map_size = ? WHERE host_and_port = ?', [this.mapSize, this.hostAndPort]);
+    }
+
+    async SetMapJson(mapJson) {
+	if (mapJson === this.mapJson) {
+	    return;
+	}
+	this.mapJson = mapJson;
+	await db.Query('UPDATE servers SET get_map_json = ? WHERE host_and_port = ?', [this.mapJson, this.hostAndPort]);
+	await this.SetMapImageUpdateTime(moment().format());
+    }
+
+    async SetInfoJson(infoJson) {
+	if (infoJson === this.infoJson) {
+	    return;
+	}
+	this.infoJson = infoJson;
+	await db.Query('UPDATE servers SET get_info_json = ? WHERE host_and_port = ?', [this.infoJson, this.hostAndPort]);
+	await this.SetMapImageUpdateTime(moment().format());
     }
 
     // Updates the fields in this cached server, and also the database, based on a server pairing confirmation message.

@@ -41,9 +41,6 @@ async function OnUserMovement(before, after, server, user) {
 	after.x,
 	after.y,
     ];
-    // Don't bother awaiting the results of the query. Fire and forget.
-    // The database is owned by the app owner so there is no issue with
-    // rate limits.
     await db.Query(query, values);
     await user.SetLastMovementTime();
 }
@@ -118,12 +115,8 @@ async function TryToCrawlOnePair(pair) {
 	    return;
 	}
     }
-    if (pair.nextRetryTime) {
-	// If this pair has had errors recently then it might have a cooldown time.
-	const retryTime = moment(pair.nextRetryTime);
-	if (retryTime.isAfter(moment())) {
-	    return;
-	}
+    if (!pair.IsAlive()) {
+	return;
     }
     console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const request = { getTeamInfo: {} };

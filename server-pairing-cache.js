@@ -55,6 +55,21 @@ class ServerPairing {
 	await this.SetNextRetryTime(retryTime.format());
     }
 
+    IsAlive() {
+	if (!this.token) {
+	    return false;
+	}
+	if (!this.consecutiveFailureCount) {
+	    return true;
+	}
+	if (!this.nextRetryTime) {
+	    return true;
+	}
+	const t = moment(this.nextRetryTime);
+	const now = moment();
+	return now.isAfter(t);
+    }
+    
     // Updates the fields in this cached server, and also the database, based on a server pairing confirmation message.
     async UpdateBasedOnServerPairingConfirmationMessage(message) {
 	if (!message || !message.ip || !message.port || !message.playerToken || !message.playerId) {

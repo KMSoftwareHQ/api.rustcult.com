@@ -6,6 +6,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const https = require('https');
 const ExpressMysqlSession = require('express-mysql-session');
+const moment = require('moment');
 const ParseHtml = require('./parse');
 const passport = require('passport');
 const passportSteam = require('passport-steam');
@@ -132,10 +133,6 @@ app.get('/map', async (req, res) => {
     res.sendFile('map.html', { root: 'static' });
 });
 
-// Cache keyed by host:port. Values have an expiry timestamp.
-// Example value { expiry: 1669671721164, data: '' }
-const cachedMapData = {};
-
 app.get('/mapdata', async (req, res) => {
     if (!req.user) {
 	return res.json({});
@@ -144,36 +141,55 @@ app.get('/mapdata', async (req, res) => {
     if (!selected) {
 	return res.json({});
     }
-    const currentTime = new Date().getTime();
     const hostAndPort = selected.hostAndPort;
-    if (hostAndPort in cachedMapData) {
-	const cached = cachedMapData[hostAndPort];
-	if (currentTime < cached.expiry) {
-	    return res.json({ map: cached.data });
+    let info;
+    try {
+	info = JSON.parse(selected.infoJson);
+    } catch (e) {
+    }
+    let map;
+    try {
+	map = JSON.parse(selected.mapJson);
+    } catch (e) {
+    }
+    const updateTime = selected.mapImageUpdateTime;
+    if (updateTime) {
+	const isRecent = moment(updateTime).add(10, 'minutes').isAfter(moment());
+	if (isRecent) {
+	    return res.json({ info, map });
 	}
     }
     const steamId = req.user.id;
     const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
-    if (!pair.token) {
-	// TODO: make this work better by caching map data in the DB layer, not in memory.
-	if (hostAndPort in cachedMapData) {
-	    const cached = cachedMapData[hostAndPort];
-	    return res.json({ map: cached.data });
-	}
+    if (!pair.IsAlive()) {
+	return res.json({ info, map });
     }
-    const request = { getMap: {} };
     let response;
     try {
-	response = await rustplus.OneOffRequest(pair, request);
+	response = await rustplus.OneOffRequest(pair, {
+	    getMap: {}
+	});
     } catch (error) {
 	console.log('Error while retrieving map image from Rust+ API');
 	console.log(error);
-	return res.json({});
+	return res.json({ info, map });
     }
-    const map = response.response.map;
-    const tenMinutes = 1 * 60 * 1000;
-    cachedMapData[hostAndPort] = { expiry: currentTime + tenMinutes, data: map };
-    return res.json({ map });
+    map = response.response.map;
+    const mapJson = JSON.stringify(map);
+    await selected.SetMapJson(mapJson);
+    try {
+	response = await rustplus.OneOffRequest(pair, {
+	    getInfo: {}
+	});
+    } catch (error) {
+	console.log('Error while retrieving server info from Rust+ API');
+	console.log(error);
+	return res.json({ map });
+    }
+    info = response.response.info;
+    const infoJson = JSON.stringify(info);
+    await selected.SetInfoJson(infoJson);
+    return res.json({ info, map });
 });
 
 app.get('/selectserver', async (req, res) => {

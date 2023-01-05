@@ -25,6 +25,10 @@ CREATE TABLE servers (
   id TEXT,
   url TEXT,
   description TEXT,
+  map_image_update_time TEXT,
+  map_size INT,
+  get_map_json LONGTEXT,
+  get_info_json LONGTEXT,
   PRIMARY KEY (incrementing_id),
   INDEX (host_and_port),
   UNIQUE (host_and_port)
