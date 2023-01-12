@@ -208,6 +208,7 @@ const godModeSteamIds = [
     '76561198416046093',  // grimmjaune
     '76561199357314454',  // Neff
     '76561198040300329',  // Dannykuun
+    '76561197992641069',  // nex
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -240,6 +241,9 @@ const allianceSteamIds = [
     '76561198054638760',  // N3xT
     '76561198040300329',  // Dannykuun
     '76561198120835721',  // Natefrog
+    '76561197992641069',  // nex
+    '76561198842114001',  // Chinese letter name
+    '76561199032914697',  // Michael
 ];
 
 // Helper function that filters bases by owner. Adds the matching

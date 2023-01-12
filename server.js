@@ -61,7 +61,10 @@ const MySQLStore = ExpressMysqlSession(session);
 const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db.GetConnection());
 app.use(session({
     cookie: {
+	domain: 'rustgovernment.com',
+	httpOnly: false,
 	maxAge: maxSessionAgeMs,
+	sameSite: false,
     },
     resave: false,
     saveUninitialized: true,
