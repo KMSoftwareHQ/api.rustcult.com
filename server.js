@@ -1,5 +1,6 @@
 // A third-party Rust+ web app that allows multiple teams to see each other on the map.
 const cluster = require('./cluster');
+const cors = require('cors');
 const crawl = require('./crawl');
 const db = require('./database');
 const express = require('express');
@@ -22,7 +23,7 @@ const uuid = require('uuid');
 // This is the express app.
 const app = express();
 
-// Turn on support for JSON and url-encoded POST bodies.
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

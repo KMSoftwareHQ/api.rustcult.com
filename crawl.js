@@ -209,6 +209,13 @@ const godModeSteamIds = [
     '76561199357314454',  // Neff
     '76561198040300329',  // Dannykuun
     '76561197992641069',  // nex
+    '76561199075315038',  // DPP
+    '76561199159176734',  // V3rySp3d
+    '76561198378667958',  // Baka / SuperB
+    '76561197983483070',  // Zorn
+    '76561198438796495',  // Ollie
+    '76561198124379883',  // Communist Destroyer
+    '76561198117333493',  // Hail
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -244,6 +251,13 @@ const allianceSteamIds = [
     '76561197992641069',  // nex
     '76561198842114001',  // Chinese letter name
     '76561199032914697',  // Michael
+    '76561199075315038',  // DPP
+    '76561199159176734',  // V3rySp3d
+    '76561198378667958',  // Baka / SuperB
+    '76561197983483070',  // Zorn
+    '76561198438796495',  // Ollie
+    '76561198124379883',  // Communist Destroyer
+    '76561198117333493',  // Hail
 ];
 
 // Helper function that filters bases by owner. Adds the matching
