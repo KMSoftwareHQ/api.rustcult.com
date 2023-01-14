@@ -4,6 +4,10 @@
     border: 0;
 }
 
+body {
+    overflow: hidden;
+}
+
 #mapcanvas {
     width: 100%;
     height: 100%;
