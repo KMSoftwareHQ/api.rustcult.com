@@ -5,6 +5,7 @@ const crawl = require('./crawl');
 const db = require('./database');
 const express = require('express');
 const fetch = require('node-fetch');
+const fs = require('fs');
 const https = require('https');
 const ExpressMysqlSession = require('express-mysql-session');
 const moment = require('moment');
@@ -490,7 +491,7 @@ async function Main() {
     const sslConfig = {
 	key: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/privkey.pem'),
 	cert: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/fullchain.pem'),
-    },
+    };
     https.createServer(sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
     console.log('Starting http.');
