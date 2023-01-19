@@ -5,6 +5,7 @@ const crawl = require('./crawl');
 const db = require('./database');
 const express = require('express');
 const fetch = require('node-fetch');
+const fs = require('fs');
 const https = require('https');
 const ExpressMysqlSession = require('express-mysql-session');
 const moment = require('moment');
@@ -46,8 +47,8 @@ passport.deserializeUser((user, done) => {
 
 // Steam login strategy middleware.
 passport.use(new passportSteam.Strategy({
-    returnURL: 'https://rustgovernment.com/auth/steam/return',
-    realm: 'https://rustgovernment.com/',
+    returnURL: 'https://api.rustcult.com/return',
+    realm: 'https://rustcult.com/',
     apiKey: secrets.steamWebApiKey,
 }, (identifier, profile, done) => {
     process.nextTick(() => {
@@ -62,7 +63,7 @@ const MySQLStore = ExpressMysqlSession(session);
 const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db.GetConnection());
 app.use(session({
     cookie: {
-	domain: 'rustgovernment.com',
+	domain: 'rustcult.com',
 	httpOnly: false,
 	maxAge: maxSessionAgeMs,
 	sameSite: false,
@@ -264,10 +265,10 @@ app.get('/log', async (req, res) => {
 app.use(express.static(__dirname + '/static', { dotfiles: 'allow' }));
 
 // Steam login endpoints.
-app.get('/auth/steam', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
+app.get('/login', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
     res.redirect('/');
 });
-app.get('/auth/steam/return', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
+app.get('/return', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
     res.redirect('/');
 });
 
@@ -487,7 +488,11 @@ async function Main() {
     await ServerPairingCache.Initialize();
     // Start the https webserver.
     console.log('Starting https.');
-    https.createServer(secrets.sslConfig, app).listen(443);
+    const sslConfig = {
+	key: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/privkey.pem'),
+	cert: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/fullchain.pem'),
+    };
+    https.createServer(sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
     console.log('Starting http.');
     app.listen(80);

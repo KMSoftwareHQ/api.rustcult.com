@@ -1,4 +1,4 @@
-const RustPlus = require('rustplus-api');
+const RustPlus = require('@liamcottle/rustplus.js');
 
 function OneOffRequest(serverPairingRecord, request) {
     const hostAndPort = serverPairingRecord.serverHostAndPort;

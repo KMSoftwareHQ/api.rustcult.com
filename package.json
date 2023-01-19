@@ -1,22 +1,23 @@
 {
-  "name": "rustgovernment.com",
-  "version": "1.0.0",
+  "name": "api.rustcult.com",
+  "version": "3.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "mocha './{,!(node_modules)/**}/*-test.js'"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/j3camero/rustgovernment.com.git"
+    "url": "git+https://github.com/j3camero/rustcult.com.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/j3camero/rustgovernment.com/issues"
+    "url": "https://github.com/j3camero/rustcult.com/issues"
   },
-  "homepage": "https://github.com/j3camero/rustgovernment.com#readme",
+  "homepage": "https://github.com/j3camero/rustcult.com#readme",
   "dependencies": {
+    "@liamcottle/rustplus.js": "^2.3.0",
     "assert": "^2.0.0",
     "canvas": "^2.10.2",
     "cors": "^2.8.5",
@@ -32,7 +33,6 @@
     "passport-steam": "^1.0.17",
     "push-receiver": "^2.1.1",
     "random-seed": "^0.3.0",
-    "rustplus-api": "^1.2.0",
     "uuid": "^9.0.0"
   }
 }
