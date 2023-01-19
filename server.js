@@ -47,7 +47,7 @@ passport.deserializeUser((user, done) => {
 
 // Steam login strategy middleware.
 passport.use(new passportSteam.Strategy({
-    returnURL: 'https://api.rustcult.com/return',
+    returnURL: 'https://rustcult.com/return',
     realm: 'https://rustcult.com/',
     apiKey: secrets.steamWebApiKey,
 }, (identifier, profile, done) => {
@@ -489,8 +489,8 @@ async function Main() {
     // Start the https webserver.
     console.log('Starting https.');
     const sslConfig = {
-	key: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/privkey.pem'),
-	cert: fs.readFileSync('/etc/letsencrypt/live/api.rustcult.com/fullchain.pem'),
+	key: fs.readFileSync('/etc/letsencrypt/live/rustcult.com/privkey.pem'),
+	cert: fs.readFileSync('/etc/letsencrypt/live/rustcult.com/fullchain.pem'),
     };
     https.createServer(sslConfig, app).listen(443);
     // Run an http webserver whose only job is to redirect http to https.
