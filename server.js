@@ -113,7 +113,7 @@ async function UpdateUserRecord(req) {
 // Landing page for non-logged=in users.
 app.get('/', (req, res) => {
     if (!req.user) {
-	return res.sendFile('index.html', { root: 'static' });
+	return res.sendFile('index.html', { root: 'rustcult.com/static' });
     }
     const selected = GetSelectedServer(req);
     if (selected) {
@@ -129,7 +129,7 @@ app.get('/servers', async (req, res) => {
 	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    res.sendFile('servers.html', { root: 'static' });
+    res.sendFile('servers.html', { root: 'rustcult.com/static' });
 });
 
 // Main map view.
@@ -138,7 +138,7 @@ app.get('/map', async (req, res) => {
 	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    res.sendFile('map.html', { root: 'static' });
+    res.sendFile('map.html', { root: 'rustcult.com/static' });
 });
 
 app.get('/mapdata', async (req, res) => {
@@ -265,7 +265,7 @@ app.get('/log', async (req, res) => {
 });
 
 // Serve static files.
-app.use(express.static(__dirname + '/static', { dotfiles: 'allow' }));
+app.use(express.static(__dirname + '/rustcult.com/static', { dotfiles: 'allow' }));
 
 // Steam login endpoints.
 app.get('/login', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
