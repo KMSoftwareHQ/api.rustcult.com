@@ -37,7 +37,9 @@ function OneOffRequest(serverPairingRecord, request) {
 	// should be necessary. Seems to work fine without it and turning it
 	// back on seems to break the connection. Do not know why but commenting
 	// it out works.
-	//client.connect();
+	// UPDATE: after some updates to this library, it seems this call is once
+	// again needed. Uncommenting it.
+	client.connect();
     });
 }
 
