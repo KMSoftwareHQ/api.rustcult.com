@@ -6,3 +6,6 @@ node_modules/*
 
 # File containing secrets.
 secrets.js
+
+# package-lock.json can be auto-generated for now.
+package-lock.json
