@@ -217,6 +217,7 @@ const godModeSteamIds = [
     '76561198124379883',  // Communist Destroyer
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
+    '76561198438796495',  // Ollie
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -260,6 +261,7 @@ const allianceSteamIds = [
     '76561198124379883',  // Communist Destroyer
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
+    '76561198438796495',  // Ollie
 ];
 
 // Helper function that filters bases by owner. Adds the matching
