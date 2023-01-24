@@ -218,6 +218,8 @@ const godModeSteamIds = [
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
     '76561198124379883',  // c0mm
+    '76561199153007787',  // MeQuista
+    '76561197966257268',  // Beary Berry
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -262,6 +264,15 @@ const allianceSteamIds = [
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
     '76561198124379883',  // c0mm
+    '76561199140667447',  // Yugomi
+    '76561199090848212',  // wack
+    '76561198218943129',  // kcool
+    '76561199153007787',  // MeQuista
+    '76561197966257268',  // Beary Berry
+    '76561198028478859',  // AnthonyD4X
+    '76561198383187757',  // Assassin6761
+    '76561198965812685',  // Bear
+    '76561198970919655',  // GeoSlaps
 ];
 
 // Helper function that filters bases by owner. Adds the matching
