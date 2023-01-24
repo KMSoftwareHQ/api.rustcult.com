@@ -21,7 +21,7 @@ async function GetDistinctPairs() {
     const pairs = await db.Query(
 	'SELECT DISTINCT server_incrementing_id, user_incrementing_id ' +
 	'FROM player_positions ' +
-	'WHERE timestamp > ? AND timestamp > CURRENT_TIMESTAMP - INTERVAL 168 HOUR',
+	'WHERE timestamp > ? AND timestamp > CURRENT_TIMESTAMP - INTERVAL 72 HOUR',
 	wipeDate);
     console.log(`Found ${Object.keys(pairs).length} distinct server:player pairs.`);
     return pairs;
