@@ -118,6 +118,7 @@ async function TryToCrawlOnePair(pair) {
     if (!pair.IsAlive()) {
 	return;
     }
+    const priorFailureCount = pair.consecutiveFailureCount;
     console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const request = { getTeamInfo: {} };
     let response;
@@ -125,13 +126,20 @@ async function TryToCrawlOnePair(pair) {
 	response = await rustplus.OneOffRequest(pair, request);
     } catch (error) {
 	console.log(error);
+	await pair.SetConsecutiveFailureCount(priorFailureCount);
+	await pair.IncrementFailureCount();
 	return;
     }
     if (!response) {
+	await pair.SetConsecutiveFailureCount(priorFailureCount);
+	await pair.IncrementFailureCount();
 	return;
     }
     if (response.response.error) {
 	console.log(`Error while crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
+	console.log(response.response.error);
+	await pair.SetConsecutiveFailureCount(priorFailureCount);
+	await pair.IncrementFailureCount();
 	return;
     }
     const teamInfo = response.response.teamInfo;
@@ -183,7 +191,7 @@ async function TryToCrawlAllPairs() {
 
 async function DoCrawl() {
     await TryToCrawlAllPairs();
-    setTimeout(DoCrawl, 100);
+    setTimeout(DoCrawl, 1);
 }
 
 // Wait a few seconds before starting the crawl.
