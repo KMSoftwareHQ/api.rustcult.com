@@ -273,6 +273,7 @@ const allianceSteamIds = [
     '76561198383187757',  // Assassin6761
     '76561198965812685',  // Bear
     '76561198970919655',  // GeoSlaps
+    '76561199143152687',  // HS.Swearings
 ];
 
 // Helper function that filters bases by owner. Adds the matching
