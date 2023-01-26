@@ -84,6 +84,9 @@ class Server {
     }
 
     async SetMapJson(mapJson) {
+	if (!mapJson) {
+	    return;
+	}
 	if (mapJson === this.mapJson) {
 	    return;
 	}
@@ -93,6 +96,9 @@ class Server {
     }
 
     async SetInfoJson(infoJson) {
+	if (!infoJson) {
+	    return;
+	}
 	if (infoJson === this.infoJson) {
 	    return;
 	}
@@ -194,7 +200,7 @@ function LogAllKnownServers() {
     console.log(`All known servers (${numServers})`);
     for (const hostAndPort in serversByHostAndPort) {
 	const server = serversByHostAndPort[hostAndPort];
-	console.log(hostAndPort, server.name);
+	console.log(hostAndPort, server.name, server.infoJson);
     }
 }
 

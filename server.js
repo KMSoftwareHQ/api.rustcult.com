@@ -69,7 +69,7 @@ app.use(session({
 	domain: 'rustcult.com',
 	httpOnly: false,
 	maxAge: maxSessionAgeMs,
-	sameSite: false,
+	sameSite: 'lax',
     },
     resave: false,
     saveUninitialized: true,
@@ -85,14 +85,15 @@ function GetSelectedServer(req) {
 	return null;
     }
     const steamId = req.user.id;
-    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
+    const pairs = ServerPairingCache.GetAllAlivePairingsForUser(steamId);
     if (pairs.length === 0) {
 	return null;
     }
-    // Determine the selected server. If None, then pick an arbitrary server that
-    // the user is paired to.
+    // Determine the selected server.
     let hostAndPort = req.session.selectedServer;
+    console.log('selected server', hostAndPort);
     if (!hostAndPort) {
+	// If None, then pick an arbitrary server that the user is paired to.
 	hostAndPort = pairs[0].serverHostAndPort;
 	req.session.selectedServer = hostAndPort;
     }
@@ -138,6 +139,10 @@ app.get('/map', async (req, res) => {
 	return res.redirect('/');
     }
     await UpdateUserRecord(req);
+    const server = GetSelectedServer(req);
+    if (!server) {
+	return res.redirect('/servers');
+    }
     res.sendFile('map.html', { root: 'rustcult.com/static' });
 });
 
@@ -191,7 +196,7 @@ app.get('/mapdata', async (req, res) => {
     } catch (error) {
 	console.log('Error while retrieving server info from Rust+ API');
 	console.log(error);
-	return res.json({ map });
+	return res.json({ info, map });
     }
     info = response.response.info;
     const infoJson = JSON.stringify(info);

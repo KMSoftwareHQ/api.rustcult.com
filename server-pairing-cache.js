@@ -202,6 +202,17 @@ function GetAllPairingsForUser(steamId) {
     return matches;
 }
 
+// Returns a list of server pairing records that are still alive for a steam ID.
+function GetAllAlivePairingsForUser(steamId) {
+    const matches = [];
+    for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
+	if (pair.userSteamId === steamId && pair.IsAlive()) {
+	    matches.push(pair);
+	}
+    }
+    return matches;
+}
+
 // Returns a list of all server pairing records.
 function GetAllPairings() {
     const matches = [];
@@ -224,6 +235,7 @@ async function LogAllKnownPairings() {
 module.exports = {
     GetAllPairings,
     GetAllPairingsForUser,
+    GetAllAlivePairingsForUser,
     GetOrCreatePairingRecordFromHostPortAndSteamId,
     GetPairingRecordFromHostPortAndSteamId,
     GetPairingRecordFromPairingNotification,
