@@ -85,7 +85,7 @@ function GetSelectedServer(req) {
 	return null;
     }
     const steamId = req.user.id;
-    const pairs = ServerPairingCache.GetAllAlivePairingsForUser(steamId);
+    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
     if (pairs.length === 0) {
 	return null;
     }
@@ -98,6 +98,16 @@ function GetSelectedServer(req) {
 	req.session.selectedServer = hostAndPort;
     }
     const server = ServerCache.GetServerByHostAndPort(hostAndPort);
+    if (!server) {
+	// No record of any server matching the host and port from the session.
+	return null;
+    }
+    const serverPairs = ServerPairingCache.GetAllPairingsForServer(hostAndPort);
+    if (serverPairs.length === 0) {
+	// No remaining alive server pairings indicates that the server is
+	// dead or down for a prolonger amount of time.
+	return null;
+    }
     return server;
 }
 

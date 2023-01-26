@@ -59,7 +59,7 @@ class ServerPairing {
 	if (!this.token) {
 	    return false;
 	}
-	if (!this.consecutiveFailureCount) {
+	if (!this.consecutiveFailureCount || this.consecutiveFailureCount < 14) {
 	    return true;
 	}
 	if (!this.nextRetryTime) {
@@ -191,22 +191,22 @@ async function GetOrCreatePairingRecordFromHostPortAndSteamId(hostAndPort, steam
     }
 }
 
-// Returns a list of server pairing records for a steam ID.
+// Returns a list of server pairing records that are still alive for a steam ID.
 function GetAllPairingsForUser(steamId) {
     const matches = [];
     for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
-	if (pair.userSteamId === steamId) {
+	if (pair.userSteamId === steamId && pair.IsAlive()) {
 	    matches.push(pair);
 	}
     }
     return matches;
 }
 
-// Returns a list of server pairing records that are still alive for a steam ID.
-function GetAllAlivePairingsForUser(steamId) {
+// Returns a list of server pairing records that are still alive for a server.
+function GetAllPairingsForServer(hostAndPort) {
     const matches = [];
     for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
-	if (pair.userSteamId === steamId && pair.IsAlive()) {
+	if (pair.serverHostAndPort === hostAndPort && pair.IsAlive()) {
 	    matches.push(pair);
 	}
     }
@@ -217,7 +217,9 @@ function GetAllAlivePairingsForUser(steamId) {
 function GetAllPairings() {
     const matches = [];
     for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
-	matches.push(pair);
+	if (pair.IsAlive()) {
+	    matches.push(pair);
+	}
     }
     return matches;
 }
@@ -235,7 +237,7 @@ async function LogAllKnownPairings() {
 module.exports = {
     GetAllPairings,
     GetAllPairingsForUser,
-    GetAllAlivePairingsForUser,
+    GetAllPairingsForServer,
     GetOrCreatePairingRecordFromHostPortAndSteamId,
     GetPairingRecordFromHostPortAndSteamId,
     GetPairingRecordFromPairingNotification,
