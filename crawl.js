@@ -228,6 +228,7 @@ const godModeSteamIds = [
     '76561198124379883',  // c0mm
     '76561199153007787',  // MeQuista
     '76561197966257268',  // Beary Berry
+    '76561198252695480',  // Hotel Guy Lennard
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -282,6 +283,7 @@ const allianceSteamIds = [
     '76561198965812685',  // Bear
     '76561198970919655',  // GeoSlaps
     '76561199143152687',  // HS.Swearings
+    '76561198252695480',  // Hotel Guy Lennard
 ];
 
 // Helper function that filters bases by owner. Adds the matching
