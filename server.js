@@ -91,7 +91,6 @@ function GetSelectedServer(req) {
     }
     // Determine the selected server.
     let hostAndPort = req.session.selectedServer;
-    console.log('selected server', hostAndPort);
     if (!hostAndPort) {
 	// If None, then pick an arbitrary server that the user is paired to.
 	hostAndPort = pairs[0].serverHostAndPort;

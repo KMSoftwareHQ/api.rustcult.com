@@ -229,6 +229,9 @@ const godModeSteamIds = [
     '76561199153007787',  // MeQuista
     '76561197966257268',  // Beary Berry
     '76561198252695480',  // Hotel Guy Lennard
+    '76561198965812685',  // Bear
+    '76561199380632758',  // scientist.exe
+    '76561198259220001',  // Nikx
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -262,14 +265,13 @@ const allianceSteamIds = [
     '76561198040300329',  // Dannykuun
     '76561198120835721',  // Natefrog
     '76561197992641069',  // nex
-    '76561198842114001',  // Chinese letter name
+    //'76561198842114001',  // Chinese letter name
     '76561199032914697',  // Michael
     '76561199075315038',  // DPP
-    '76561199159176734',  // V3rySp3d
+    //'76561199159176734',  // V3rySp3d
     '76561198378667958',  // Baka / SuperB
     '76561197983483070',  // Zorn
     '76561198438796495',  // Ollie
-    '76561198124379883',  // Communist Destroyer
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
     '76561198124379883',  // c0mm
@@ -284,6 +286,24 @@ const allianceSteamIds = [
     '76561198970919655',  // GeoSlaps
     '76561199143152687',  // HS.Swearings
     '76561198252695480',  // Hotel Guy Lennard
+    '76561197987100446',  // Biff Blazer
+    '76561198187905074',  // Ooda Loop
+    '76561198079834936',  // Mayonnaise / Adam
+    '76561198372402716',  // darling
+    '76561198400099971',  // magoo
+    '76561198047881975',  // Dragon
+    '76561198054245955',  // yoma / yone
+    '76561198842114001',  // SomeRandomGuy / Some Random Guy
+    '76561198035413727',  // Rusty Spork
+    '76561198855976834',  // renee
+    '76561199380632758',  // scientist.exe
+    '76561198259220001',  // Nikx
+    '76561198148164604',  // God Usopp
+    '76561198238364636',  // noodlefriedrice
+    '76561199229590224',  // william007
+    '76561198282998778',  // spartanswords
+    '76561198169129975',  // cableguy
+    '76561197967579894',  // bambam
 ];
 
 // Helper function that filters bases by owner. Adds the matching
