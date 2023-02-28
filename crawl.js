@@ -217,8 +217,8 @@ const godModeSteamIds = [
     '76561199357314454',  // Neff
     '76561198040300329',  // Dannykuun
     '76561197992641069',  // nex
-    '76561199075315038',  // DPP
-    '76561199159176734',  // V3rySp3d
+    //'76561199075315038',  // DPP
+    //'76561199159176734',  // V3rySp3d
     '76561198378667958',  // Baka / SuperB
     '76561197983483070',  // Zorn
     '76561198438796495',  // Ollie
@@ -226,12 +226,16 @@ const godModeSteamIds = [
     '76561198117333493',  // Hail
     '76561197976258075',  // Honeybadger
     '76561198124379883',  // c0mm
-    '76561199153007787',  // MeQuista
+    //'76561199153007787',  // MeQuista
     '76561197966257268',  // Beary Berry
     '76561198252695480',  // Hotel Guy Lennard
     '76561198965812685',  // Bear
     '76561199380632758',  // scientist.exe
     '76561198259220001',  // Nikx
+    '76561198047881975',  // Dragon
+    '76561198079834936',  // Mayonnaise / Adam
+    '76561197967579894',  // bambam
+    '76561197987100446',  // Biff Blazer
 ];
 
 // The Alliance consists of anyone in this list, plus anyone in a team with any
@@ -267,7 +271,7 @@ const allianceSteamIds = [
     '76561197992641069',  // nex
     //'76561198842114001',  // Chinese letter name
     '76561199032914697',  // Michael
-    '76561199075315038',  // DPP
+    //'76561199075315038',  // DPP
     //'76561199159176734',  // V3rySp3d
     '76561198378667958',  // Baka / SuperB
     '76561197983483070',  // Zorn
@@ -278,7 +282,7 @@ const allianceSteamIds = [
     '76561199140667447',  // Yugomi
     '76561199090848212',  // wack
     '76561198218943129',  // kcool
-    '76561199153007787',  // MeQuista
+    //'76561199153007787',  // MeQuista
     '76561197966257268',  // Beary Berry
     '76561198028478859',  // AnthonyD4X
     '76561198383187757',  // Assassin6761
@@ -299,11 +303,19 @@ const allianceSteamIds = [
     '76561199380632758',  // scientist.exe
     '76561198259220001',  // Nikx
     '76561198148164604',  // God Usopp
-    '76561198238364636',  // noodlefriedrice
+    //'76561198238364636',  // noodlefriedrice
     '76561199229590224',  // william007
     '76561198282998778',  // spartanswords
     '76561198169129975',  // cableguy
     '76561197967579894',  // bambam
+    '76561198026842496',  // LouHollywood
+    '76561198009624687',  // Grizart
+    //'76561199075315038',  // DustinRS
+    '76561198067255998',  // Dex
+    '76561198146464699',  // Friend of c0mm
+    '76561197988803815',  // Another friend of c0mm
+    '76561198097008998',  // Friend of c0mm
+    '76561198035823422',  // Friend of c0mm
 ];
 
 // Helper function that filters bases by owner. Adds the matching
