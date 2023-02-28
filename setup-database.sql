@@ -9,6 +9,9 @@ CREATE TABLE users (
   account_time_created INT,
   last_movement_time TIMESTAMP,
   last_base_detection_time TIMESTAMP,
+  is_owner BOOLEAN,
+  is_high_priest BOOLEAN,
+  is_cult_member BOOLEAN,
   PRIMARY KEY (incrementing_id),
   INDEX (steam_id),
   UNIQUE (steam_id)

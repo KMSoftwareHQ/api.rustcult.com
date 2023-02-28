@@ -13,6 +13,9 @@ class User {
 	this.accountTimeCreated = databaseRow.account_time_created;
 	this.lastMovementTime = databaseRow.last_movement_time;
 	this.lastBaseDetectionTime = databaseRow.last_base_detection_time;
+	this.isOwner = databaseRow.is_owner;
+	this.isHighPriest = databaseRow.is_high_priest;
+	this.isCultMember = databaseRow.is_cult_member;
     }
 
     async SetSteamName(steamName) {
@@ -61,6 +64,22 @@ class User {
 	}
 	this.accountTimeCreated = accountTimeCreated;
 	await db.Query('UPDATE users SET account_time_created = ? WHERE steam_id = ?', [this.accountTimeCreated, this.steamId]);
+    }
+
+    async SetHighPriest(isHighPriest) {
+	if (isHighPriest === this.isHighPriest) {
+	    return;
+	}
+	this.isHighPriest = isHighPriest;
+	await db.Query('UPDATE users SET is_high_priest = ? WHERE steam_id = ?', [this.isHighPriest, this.steamId]);
+    }
+
+    async SetCultMember(isCultMember) {
+	if (isCultMember === this.isCultMember) {
+	    return;
+	}
+	this.isCultMember = isCultMember;
+	await db.Query('UPDATE users SET is_cult_member = ? WHERE steam_id = ?', [this.isCultMember, this.steamId]);
     }
 
     async SetLastMovementTime() {
