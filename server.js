@@ -264,20 +264,6 @@ app.get('/dots', (req, res) => {
     return res.json(dots);
 });
 
-// For debugging purposes this endpoint causes the entire
-// cache to be logged to the console.
-app.get('/log', async (req, res) => {
-    if (!req.user) {
-	return res.redirect('/');
-    }
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
-    await user.UpdateBasedOnSteamUserRecord(req.user);
-    UserCache.LogAllUsers();
-    ServerCache.LogAllKnownServers();
-    ServerPairingCache.LogAllKnownPairings();
-    res.json({ ok: true });
-});
-
 // Serve static files.
 app.use(express.static(__dirname + '/rustcult.com/static', { dotfiles: 'allow' }));
 
