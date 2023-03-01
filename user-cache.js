@@ -192,10 +192,20 @@ function LogAllUsers() {
     }
 }
 
+function GetAllUsersAsAShallowCopiedList() {
+    const c = [];
+    for (const steamId in usersBySteamId) {
+	const user = usersBySteamId[steamId];
+	c.push(user);
+    }
+    return c;
+}
+
 module.exports = {
     GetUserBySteamId,
     GetOrCreateUserBySteamId,
     GetOrCreateUserFromSteamAuth,
+    GetAllUsersAsAShallowCopiedList,
     Initialize,
     LogAllUsers,
 };

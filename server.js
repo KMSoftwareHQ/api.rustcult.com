@@ -217,6 +217,186 @@ app.get('/mapdata', async (req, res) => {
     return res.json({ info, map });
 });
 
+function SortUsersForOwner(a, b) {
+    if (a.isHighPriest && !b.isHighPriest) {
+	return -1;
+    }
+    if (!a.isHighPriest && b.isHighPriest) {
+	return 1;
+    }
+    if (a.isCultMember && !b.isCultMember) {
+	return -1;
+    }
+    if (!a.isCultMember && b.isCultMember) {
+	return 1;
+    }
+    if (a.steamName && !b.steamName) {
+	return -1;
+    }
+    if (!a.steamName && b.steamName) {
+	return 1;
+    }
+    if (a.steamName && b.steamName) {
+	const bySteamName = a.steamName.localeCompare(b.steamName);
+	if (bySteamName !== 0) {
+	    return bySteamName;
+	}
+    }
+    if (a.steamId && !b.steamId) {
+	return -1;
+    }
+    if (!a.steamId && b.steamId) {
+	return 1;
+    }
+    if (a.steamId && b.steamId) {
+	const bySteamId = a.steamId.localeCompare(b.steamId);
+	if (bySteamId !== 0) {
+	    return bySteamId;
+	}
+    }
+    if (a.incrementingId < b.incrementingId) {
+	return -1;
+    }
+    if (a.incrementingId > b.incrementingId) {
+	return 1;
+    }
+    return 0;
+}
+
+// The developer uses this page to ordinate the elected Mr. President as a high priest (admin) of the cult.
+app.get('/owner', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
+    if (!user) {
+	return res.redirect('/');
+    }
+    if (!user.isOwner) {
+	return res.redirect('/');
+    }
+    const ownerSteamId = '76561198054245955';
+    if (user.steamId !== ownerSteamId) {
+	return res.redirect('/');
+    }
+    const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
+    allUsers.sort(SortUsersForOwner);
+    let html = `<ol>`;
+    for (const u of allUsers) {
+	if (u.isHighPriest) {
+	    html += `<li>${u.steamId} ${u.steamName} <a href="/dismisshighpriest?steamid=${u.steamId}">Dismiss</a></li>`;
+	} else {
+	    html += `<li>${u.steamId} ${u.steamName} <a href="/ordinatehighpriest?steamid=${u.steamId}">Ordinate</a></li>`;
+	}
+    }
+    html += `</ol>`;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+});
+
+async function UpdateHighPriestStatus(req, res, newIsHighPriest) {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
+    if (!user) {
+	return res.redirect('/');
+    }
+    if (!user.isOwner) {
+	return res.redirect('/');
+    }
+    const ownerSteamId = '76561198054245955';
+    if (user.steamId !== ownerSteamId) {
+	return res.redirect('/');
+    }
+    const targetSteamId = req.query.steamid;
+    if (!targetSteamId) {
+	return res.redirect('/');
+    }
+    if (targetSteamId.length !== 17) {
+	return res.redirect('/');
+    }
+    const target = UserCache.GetUserBySteamId(targetSteamId);
+    if (!target) {
+	return res.redirect('/');
+    }
+    await target.SetHighPriest(newIsHighPriest);
+    return res.redirect('/owner');
+}
+
+app.get('/ordinatehighpriest', async (req, res) => {
+    return await UpdateHighPriestStatus(req, res, true);
+});
+
+app.get('/dismisshighpriest', async (req, res) => {
+    return await UpdateHighPriestStatus(req, res, false);
+});
+
+// High Priests of the clan (admins basically) use this secret page to add/remove clan members.
+app.get('/backdoor', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
+    if (!user) {
+	return res.redirect('/');
+    }
+    if (!user.isHighPriest) {
+	return res.redirect('/');
+    }
+    const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
+    allUsers.sort(SortUsersForOwner);
+    let html = `<ol>`;
+    for (const u of allUsers) {
+	if (u.isCultMember) {
+	    html += `<li>${u.steamId} ${u.steamName} <a href="/bancultmember?steamid=${u.steamId}">Ban</a></li>`;
+	} else {
+	    html += `<li>${u.steamId} ${u.steamName} <a href="/addcultmember?steamid=${u.steamId}">Add</a></li>`;
+	}
+    }
+    html += `</ol>`;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+});
+
+async function UpdateCultMemberStatus(req, res, newIsCultMember) {
+    if (!req.user) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
+    if (!user) {
+	return res.redirect('/');
+    }
+    if (!user.isHighPriest) {
+	return res.redirect('/');
+    }
+    const targetSteamId = req.query.steamid;
+    if (!targetSteamId) {
+	return res.redirect('/');
+    }
+    if (targetSteamId.length !== 17) {
+	return res.redirect('/');
+    }
+    const target = UserCache.GetUserBySteamId(targetSteamId);
+    if (!target) {
+	return res.redirect('/');
+    }
+    await target.SetCultMember(newIsCultMember);
+    return res.redirect('/backdoor');
+}
+
+app.get('/addcultmember', async (req, res) => {
+    return await UpdateCultMemberStatus(req, res, true);
+});
+
+app.get('/bancultmember', async (req, res) => {
+    return await UpdateCultMemberStatus(req, res, false);
+});
+
 app.get('/selectserver', async (req, res) => {
     const host = req.query.host;
     const port = req.query.port;
