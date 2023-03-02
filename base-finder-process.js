@@ -6,7 +6,7 @@ const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const UserCache = require('./user-cache');
 
-const wipeDate = '2023-01-05';
+const wipeDate = '2023-02-02 19:00:00';
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
