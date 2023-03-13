@@ -68,7 +68,7 @@ function FindDensestPointExcludingCircles(points, centers, exclusionRadius) {
 async function FindBases(serverIncrementingId, userIncrementingId) {
     // Initialize d3 if it isn't already.
     d3 = await d3;
-    const wipeDate = '2023-01-05';
+    const wipeDate = '2023-02-02 19:00:00';
     const points = await db.Query(
 	'SELECT x, y FROM player_positions ' +
 	'WHERE user_incrementing_id = ? AND server_incrementing_id = ? ' +
@@ -77,7 +77,7 @@ async function FindBases(serverIncrementingId, userIncrementingId) {
     );
     const bases = [];
     const n = points.length;
-    if (n < 500) {
+    if (n < 300) {
 	// Not enough points to confidently identify bases. Bail.
 	return bases;
     }
@@ -94,7 +94,7 @@ async function FindBases(serverIncrementingId, userIncrementingId) {
 	const neighborCount = base[2];
 	const density = neighborCount / points.length;
 	const percent = (100 * density).toFixed(3);
-	if (density < 0.03) {
+	if (density < 0.02) {
 	    break;
 	}
 	bases.push(base);
