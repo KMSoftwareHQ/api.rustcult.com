@@ -1,0 +1,11 @@
+ol {
+    list-style: none;
+}
+
+li {
+    font-size: 1.2rem;
+}
+
+li:nth-child(odd) {
+    background: #f0f0f0;
+}

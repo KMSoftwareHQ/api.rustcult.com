@@ -201,11 +201,23 @@ function GetAllUsersAsAShallowCopiedList() {
     return c;
 }
 
+function GetCultMemberSteamIds() {
+    const c = [];
+    for (const steamId in usersBySteamId) {
+	const user = usersBySteamId[steamId];
+	if (user.isCultMember) {
+	    c.push(user.steamId);
+	}
+    }
+    return c;
+}
+
 module.exports = {
     GetUserBySteamId,
     GetOrCreateUserBySteamId,
     GetOrCreateUserFromSteamAuth,
     GetAllUsersAsAShallowCopiedList,
+    GetCultMemberSteamIds,
     Initialize,
     LogAllUsers,
 };

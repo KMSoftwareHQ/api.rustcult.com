@@ -30,6 +30,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.disable('x-powered-by');
 
 // Redirect http to https.
 app.use((request, response, next) => {
@@ -282,7 +283,8 @@ app.get('/owner', async (req, res) => {
     }
     const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
     allUsers.sort(SortUsersForOwner);
-    let html = `<ol>`;
+    let html = `<html><head><title>Owner Panel</title><link rel="stylesheet" type="text/css" href="backdoor.css" /></head><body>`;
+    html += `<ol>`;
     for (const u of allUsers) {
 	if (u.isHighPriest) {
 	    html += `<li>${u.steamId} ${u.steamName} <a href="/dismisshighpriest?steamid=${u.steamId}">Dismiss</a></li>`;
@@ -349,7 +351,8 @@ app.get('/backdoor', async (req, res) => {
     }
     const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
     allUsers.sort(SortUsersForOwner);
-    let html = `<ol>`;
+    let html = `<html><head><title>Backdoor</title><link rel="stylesheet" type="text/css" href="backdoor.css" /></head><body>`;
+    html += `<ol>`;
     for (const u of allUsers) {
 	if (u.isCultMember) {
 	    html += `<li>${u.steamId} ${u.steamName} <a href="/bancultmember?steamid=${u.steamId}">Ban</a></li>`;
@@ -357,7 +360,7 @@ app.get('/backdoor', async (req, res) => {
 	    html += `<li>${u.steamId} ${u.steamName} <a href="/addcultmember?steamid=${u.steamId}">Add</a></li>`;
 	}
     }
-    html += `</ol>`;
+    html += `</ol></body></html>`;
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
 });
@@ -395,6 +398,11 @@ app.get('/addcultmember', async (req, res) => {
 
 app.get('/bancultmember', async (req, res) => {
     return await UpdateCultMemberStatus(req, res, false);
+});
+
+app.get('/backdoor.css', async (req, res) => {
+    res.setHeader('Content-Type', 'text/css');
+    res.sendFile('backdoor.css', { root: __dirname });
 });
 
 app.get('/selectserver', async (req, res) => {
