@@ -65,3 +65,12 @@ CREATE TABLE player_bases (
   main_base BOOLEAN,
   INDEX (server_incrementing_id, user_incrementing_id)
 );
+
+CREATE TABLE player_positions_by_timestamp (
+  timestamp TIMESTAMP(0),
+  server_incrementing_id INT,
+  user_incrementing_id INT,
+  x FLOAT,
+  y FLOAT,
+  INDEX (timestamp)
+);
