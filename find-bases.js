@@ -68,7 +68,7 @@ function FindDensestPointExcludingCircles(points, centers, exclusionRadius) {
 async function FindBases(serverIncrementingId, userIncrementingId) {
     // Initialize d3 if it isn't already.
     d3 = await d3;
-    const wipeDate = '2023-04-06 19:00:00';
+    const wipeDate = '2023-05-04 19:00:00';
     const points = await db.Query(
 	'SELECT x, y FROM player_positions ' +
 	'WHERE user_incrementing_id = ? AND server_incrementing_id = ? ' +
