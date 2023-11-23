@@ -65,7 +65,16 @@ class ServerPairing {
 	if (!this.nextRetryTime) {
 	    return true;
 	}
-	const t = moment(this.nextRetryTime);
+	if (this.nextRetryTime.includes('NaN')) {
+	    return false;
+	}
+	let t;
+	try {
+	    t = moment(this.nextRetryTime);
+	} catch (e) {
+	    console.log(e);
+	    console.log('nextRetryTime', this.nextRetryTime);
+	}
 	const now = moment();
 	return now.isAfter(t);
     }

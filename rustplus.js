@@ -11,6 +11,17 @@ function OneOffRequest(serverPairingRecord, request) {
     const steamId = serverPairingRecord.userSteamId;
     const token = serverPairingRecord.token;
     return new Promise((resolve, reject) => {
+	// Make a note when rejecting this promise so we don't later resolve it.
+	let isRejected = false;
+	// Set a max time limit for the request.
+	const maxLatencyTimeout = setTimeout(() => {
+	    if (client.websocket) {
+		client.websocket.terminate();
+		client.websocket = null;
+	    }
+	    isRejected = true;
+	    reject();
+	}, 5000);
 	const client = new RustPlus(host, port, steamId, token);
 	client.on('error', async (error) => {
 	    await serverPairingRecord.IncrementFailureCount();
@@ -22,6 +33,10 @@ function OneOffRequest(serverPairingRecord, request) {
 	    // about its status and waiting a short while seems to sort it out.
 	    setTimeout(() => {
 		client.sendRequest(request, async (response) => {
+		    if (isRejected) {
+			return;
+		    }
+		    clearTimeout(maxLatencyTimeout);
 		    if (client.websocket) {
 			client.websocket.terminate();
 			client.websocket = null;
