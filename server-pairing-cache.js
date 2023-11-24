@@ -48,7 +48,7 @@ class ServerPairing {
 
     async IncrementFailureCount() {
 	const c = this.consecutiveFailureCount;
-	const timeoutSeconds = Math.pow(2, c + 1);
+	const timeoutSeconds = Math.pow(2, c + 2);
 	const currentTime = moment();
 	const retryTime = currentTime.add(timeoutSeconds, 'seconds');
 	await this.SetConsecutiveFailureCount(c + 1);
