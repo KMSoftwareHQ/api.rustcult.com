@@ -125,7 +125,7 @@ async function TryToCrawlOnePair(pair) {
     try {
 	response = await rustplus.OneOffRequest(pair, request);
     } catch (error) {
-	console.log(error);
+	console.log('Error during rust+ request:', error);
 	await pair.SetConsecutiveFailureCount(priorFailureCount);
 	await pair.IncrementFailureCount();
 	return;
@@ -184,9 +184,13 @@ async function TryToCrawlOnePair(pair) {
 
 async function TryToCrawlAllPairs() {
     const pairs = ServerPairingCache.GetAllPairings();
+    const crawlPromisesForAllPairs = [];
     for (const pair of pairs) {
-	await TryToCrawlOnePair(pair);
+	const crawlPromiseForOnePair = TryToCrawlOnePair(pair);
+	crawlPromisesForAllPairs.push(crawlPromiseForOnePair);
     }
+    // Crawl all pairs simultaneously to gain parallelism.
+    await Promise.allSettled(crawlPromisesForAllPairs);
 }
 
 async function DoCrawl() {

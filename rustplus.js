@@ -20,8 +20,8 @@ function OneOffRequest(serverPairingRecord, request) {
 		client.websocket = null;
 	    }
 	    isRejected = true;
-	    reject();
-	}, 5000);
+	    reject('Rust+ request took too long');
+	}, 1000);
 	const client = new RustPlus(host, port, steamId, token);
 	client.on('error', async (error) => {
 	    await serverPairingRecord.IncrementFailureCount();
