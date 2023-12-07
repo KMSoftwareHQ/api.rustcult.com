@@ -1,4 +1,4 @@
-for i in `seq 1 100`
+for i in `seq 1 99`
 do
-    node render-village.js $i
+    node render-whole-month.js $i
 done
