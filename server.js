@@ -3,6 +3,7 @@ const cluster = require('./cluster');
 const cors = require('cors');
 const crawl = require('./crawl');
 const db = require('./database');
+const DiscordStrategy = require('passport-discord').Strategy;
 const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs');
@@ -60,6 +61,27 @@ passport.use(new passportSteam.Strategy({
 	return done(null, profile);
     });
 }));
+
+const discordConfig = {
+    clientID: '318947673388613632',
+    clientSecret: 'ryPdC5BChVaFO6q4Jk7QEOtXqzA3Jomq',
+    callbackURL: 'https://rustcult.com/discordauthorizecallback',
+    scope: ['identify'],
+};
+
+function DiscordVerifyFunction(accessToken, refreshToken, profile, cb) {
+    console.log('Discord verify function - Discord ID:', profile.id);
+    const err = null;
+    const user = profile;
+    cb(err, user);
+};
+
+// Discord authorization middleware for account linking. The main authentication
+// provider used by this app is "Login with Steam". After logging in with Steam,
+// another button is there to further link a discord account. The goal is to
+// link the two accounts.
+const discordStrat = new DiscordStrategy(discordConfig, DiscordVerifyFunction);
+passport.use(discordStrat);
 
 // Set up mysql-based session store. The sessions are stored in an RDS database.
 const maxSessionAgeMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
@@ -456,10 +478,11 @@ app.get('/dots', (req, res) => {
 app.use(express.static(__dirname + '/rustcult.com/static', { dotfiles: 'allow' }));
 
 // Steam login endpoints.
-app.get('/login', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
+const failureRedirect = { failureRedirect: '/' };
+app.get('/login', passport.authenticate('steam', failureRedirect), (req, res) => {
     res.redirect('/');
 });
-app.get('/return', passport.authenticate('steam', {failureRedirect: '/'}), (req, res) => {
+app.get('/return', passport.authenticate('steam', failureRedirect), (req, res) => {
     res.redirect('/');
 });
 
@@ -472,6 +495,17 @@ app.get('/logout', (req, res, next) => {
 	    res.redirect('/');
 	}
     });
+});
+
+// Discord account linking via OAuth AUTHORIZE.
+app.get('/discordauthorize', passport.authorize('discord', failureRedirect));
+app.get('/discordauthorizecallback', passport.authorize('discord', failureRedirect), (req, res) => {
+    const steam = req.user;
+    const discord = req.account;
+    const steamId = steam.id || 'NONE';
+    const discordId = discord.id || 'NONE';
+    console.log('Link successful STEAMID', steamId, 'DISCORDID', discordId);
+    res.redirect('/');
 });
 
 // Helper function for the server pairing flow.

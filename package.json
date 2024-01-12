@@ -30,6 +30,7 @@
     "mysql": "^2.18.1",
     "node-fetch": "^2.6.7",
     "passport": "^0.6.0",
+    "passport-discord": "^0.1.4",
     "passport-steam": "^1.0.17",
     "push-receiver": "^2.1.1",
     "random-seed": "^0.3.0",
