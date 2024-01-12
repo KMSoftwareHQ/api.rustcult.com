@@ -30,7 +30,7 @@ let players = {};
 let colors = [];
 const userIds = [];
 let canvas, ctx;
-const alpha = '0.5';
+const alpha = '0.1';
 
 async function InitializeDatabaseCaches() {
     console.log('Initializing caches.');
@@ -195,7 +195,8 @@ async function Main() {
     colors = GenerateRainbowColors(numColors);
     Shuffle(colors);
     //canvas = createCanvas(5160, 4200);  // 20x16 inches at 240 DPI with 3/4 inch border.
-    canvas = createCanvas(7560, 6120);  // 30x24 inches at 240 DPI with 3/4 inch border.
+    //canvas = createCanvas(7560, 6120);  // 30x24 inches at 240 DPI with 3/4 inch border.
+    canvas = createCanvas(1500, 1200);  // Thumbnail sized image.
     ctx = canvas.getContext('2d');
     const filename = `village-${seed}.png`;
     console.log('Rendering', filename);

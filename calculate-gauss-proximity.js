@@ -191,24 +191,47 @@ function RelationshipSummary() {
 }
 
 function PrintRelationships() {
-    console.log('ALL RELATIONSHIPS');
+//    console.log('ALL RELATIONSHIPS');
+//    for (const i in relationships) {
+//	for (const j in relationships[i]) {
+//	    const r = relationships[i][j];
+//	    console.log(i, j, r);
+//	}
+//    }
+    const sortable = [];
     for (const i in relationships) {
 	for (const j in relationships[i]) {
 	    const r = relationships[i][j];
-	    console.log(i, j, r);
+	    sortable.push({ i, j, r });
 	}
+    }
+    sortable.sort((a, b) => {
+	if (a.r < b.r) {
+	    return 1;
+	}
+	if (a.r > b.r) {
+	    return -1;
+	}
+	return 0;
+    });
+    const n = sortable.length;
+    console.log(n, 'All relationships');
+    for (const a of sortable) {
+	console.log(a.r, a.i, a.j);
     }
 }
 
 async function Main() {
-    const sql = 'SELECT * FROM player_positions ORDER BY timestamp';
+    const sql = `SELECT * FROM player_positions WHERE timestamp > '2023-12-01' ORDER BY timestamp`;
     console.log('Starting query');
     const results = await db.Query(sql);
-    console.log('Query finished. Got', results.length, 'footsteps');
+    const n = results.length;
+    console.log('Query finished. Got', n, 'footsteps');
     let timeCursor;
     let secondsProcessed = 0;
     let maxQueueLength = 0;
     let t;
+    let rowCount = 0;
     for (const row of results) {
 	t = row.timestamp.getTime();
 	if (!timeCursor) {
@@ -223,6 +246,10 @@ async function Main() {
 	const queueLength = CountQueue();
 	maxQueueLength = Math.max(queueLength, maxQueueLength);
 	PopOldFootsteps(timeCursor);
+	rowCount++;
+	if (rowCount % 10000 === 0) {
+	    console.log(rowCount, 'of', n, (100 * rowCount / n).toFixed(2), '%');
+	}
     }
     const finalT = t;
     while (timeCursor < finalT) {
