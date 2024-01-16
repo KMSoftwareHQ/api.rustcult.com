@@ -516,11 +516,16 @@ app.get('/dots', (req, res) => {
 app.use(express.static(__dirname + '/rustcult.com/static', { dotfiles: 'allow' }));
 
 // Steam login endpoints.
-const failureRedirect = { failureRedirect: '/' };
-app.get('/login', passport.authenticate('steam', failureRedirect), (req, res) => {
+app.get('/login', passport.authenticate('steam', { failureRedirect: '/loginfailure' }), (req, res) => {
+    console.log('Should not get here');
+    //res.redirect('/');
+});
+app.get('/return', passport.authenticate('steam', { failureRedirect: '/loginfailure' }), (req, res) => {
+    console.log('Steam login success');
     res.redirect('/');
 });
-app.get('/return', passport.authenticate('steam', failureRedirect), (req, res) => {
+app.get('/loginfailure', (req, res) => {
+    console.log('Steam login failure!');
     res.redirect('/');
 });
 
@@ -536,8 +541,8 @@ app.get('/logout', (req, res, next) => {
 });
 
 // Discord account linking via OAuth AUTHORIZE.
-app.get('/discordauthorize', passport.authorize('discord', failureRedirect));
-app.get('/discordauthorizecallback', passport.authorize('discord', failureRedirect), async (req, res) => {
+app.get('/discordauthorize', passport.authorize('discord', { failureRedirect: '/discordauthorizefailure' }));
+app.get('/discordauthorizecallback', passport.authorize('discord', { failureRedirect: '/discordauthorizefailure' }), async (req, res) => {
     const discord = req.account;
     if (!discord) {
 	return res.redirect('/');
@@ -561,6 +566,10 @@ app.get('/discordauthorizecallback', passport.authorize('discord', failureRedire
     await user.SetDiscordUsername(discord.username);
     console.log('Link successful STEAMID', steam.id, 'DISCORDID', discord.id);
     res.redirect('/');
+});
+app.get('/discordauthorizefailure', (req, res) => {
+    console.log('Discord link failure!');
+    res.redirect('/link');
 });
 
 // Helper function for the server pairing flow.
