@@ -143,17 +143,23 @@ async function UpdateUserRecord(req) {
     }
 }
 
-// Landing page for non-logged=in users.
+// Landing page for non-logged-in users.
 app.get('/', (req, res) => {
-    if (!req.user) {
+    if (req.user) {
+	return res.redirect('/servers');
+    } else {
 	return res.sendFile('index.html', { root: 'rustcult.com/static' });
     }
-    const selected = GetSelectedServer(req);
-    if (selected) {
-	return res.redirect('/map');
-    } else {
-	return res.redirect('/servers');
+});
+
+// Discord account linking page.
+app.get('/link', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
+    await UpdateUserRecord(req);
+    // Proceed even if user already linked, allowing to link a different account.
+    res.sendFile('link.html', { root: 'rustcult.com/static' });
 });
 
 // Server selection and pairing page.
@@ -162,7 +168,39 @@ app.get('/servers', async (req, res) => {
 	return res.redirect('/');
     }
     await UpdateUserRecord(req);
+    const steamId = req.user.id;
+    if (!steamId) {
+	return res.redirect('/');
+    }
+    const user = UserCache.GetUserBySteamId(steamId);
+    if (!user) {
+	return res.redirect('/');
+    }
+    if (!user.discordId || !user.discordUsername) {
+	return res.redirect('/link');
+    }
     res.sendFile('servers.html', { root: 'rustcult.com/static' });
+});
+
+app.get('/me', async (req, res) => {
+    if (!req.user) {
+	return res.json({ error: 'Not logged in' });
+    }
+    await UpdateUserRecord(req);
+    const steamId = req.user.id;
+    if (!steamId) {
+	return res.json({ error: 'Invalid steam ID' });
+    }
+    const u = UserCache.GetUserBySteamId(steamId);
+    if (!u) {
+	return res.json({ error: 'Unknown user.' });
+    }
+    res.json({
+	discordId: u.discordId,
+	discordUsername: u.discordUsername,
+	steamId: u.steamId,
+	steamName: u.steamName,
+    });
 });
 
 // Main map view.
@@ -499,12 +537,29 @@ app.get('/logout', (req, res, next) => {
 
 // Discord account linking via OAuth AUTHORIZE.
 app.get('/discordauthorize', passport.authorize('discord', failureRedirect));
-app.get('/discordauthorizecallback', passport.authorize('discord', failureRedirect), (req, res) => {
-    const steam = req.user;
+app.get('/discordauthorizecallback', passport.authorize('discord', failureRedirect), async (req, res) => {
     const discord = req.account;
-    const steamId = steam.id || 'NONE';
-    const discordId = discord.id || 'NONE';
-    console.log('Link successful STEAMID', steamId, 'DISCORDID', discordId);
+    if (!discord) {
+	return res.redirect('/');
+    }
+    if (!discord.id) {
+	return res.redirect('/');
+    }
+    const steam = req.user;
+    if (!steam) {
+	return res.redirect('/');
+    }
+    if (!steam.id) {
+	return res.redirect('/');
+    }
+    await UpdateUserRecord(req);
+    const user = UserCache.GetUserBySteamId(steam.id);
+    if (!user) {
+	return res.redirect('/');
+    }
+    await user.SetDiscordId(discord.id);
+    await user.SetDiscordUsername(discord.username);
+    console.log('Link successful STEAMID', steam.id, 'DISCORDID', discord.id);
     res.redirect('/');
 });
 

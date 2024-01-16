@@ -12,6 +12,8 @@ CREATE TABLE users (
   is_owner BOOLEAN,
   is_high_priest BOOLEAN,
   is_cult_member BOOLEAN,
+  discord_id VARCHAR(64),
+  discord_username VARCHAR(128),
   PRIMARY KEY (incrementing_id),
   INDEX (steam_id),
   UNIQUE (steam_id)

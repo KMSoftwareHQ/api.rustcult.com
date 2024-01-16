@@ -1,3 +1,4 @@
+const queriesToRun = [
 `UPDATE users SET discord_id = '321034943058804738' WHERE steam_id = '76561198047845894';`,
 `UPDATE users SET discord_id = '325455587699589145' WHERE steam_id = '76561198017903507';`,
 `UPDATE users SET discord_id = '803127703493935154' WHERE steam_id = '76561198981663244';`,
@@ -55,7 +56,7 @@
 `UPDATE users SET discord_id = '662611982616100864' WHERE steam_id = '76561197991290061';`,
 `UPDATE users SET discord_id = '224581650619564033' WHERE steam_id = '76561198032183166';`,
 `UPDATE users SET discord_id = '100353479008071680' WHERE steam_id = '76561198192029937';`,
-`UPDATE users SET discord_id = '284395393603862528' WHERE steam_id = '76561198141814859 ';`,
+`UPDATE users SET discord_id = '284395393603862528' WHERE steam_id = '76561198141814859';`,
 `UPDATE users SET discord_id = '288869664585678850' WHERE steam_id = '76561198150646158';`,
 `UPDATE users SET discord_id = '485543144583069696' WHERE steam_id = '76561198853212042';`,
 `UPDATE users SET discord_id = '422982229241888790' WHERE steam_id = '76561198036173991';`,
@@ -104,10 +105,10 @@
 `UPDATE users SET discord_id = '468159820982124544' WHERE steam_id = '76561198027509993';`,
 `UPDATE users SET discord_id = '821012061727096862' WHERE steam_id = '76561199089911319';`,
 `UPDATE users SET discord_id = '333844275538296833' WHERE steam_id = '76561198308992151';`,
-`UPDATE users SET discord_id = '693247321864929441' WHERE steam_id = '76561198273984363 ';`,
+`UPDATE users SET discord_id = '693247321864929441' WHERE steam_id = '76561198273984363';`,
 `UPDATE users SET discord_id = '351062463787040780' WHERE steam_id = '76561198198464785';`,
 `UPDATE users SET discord_id = '803917963727732796' WHERE steam_id = '76561199130471163';`,
-`UPDATE users SET discord_id = '230425645023363072' WHERE steam_id = '76561198093429192 ';`,
+`UPDATE users SET discord_id = '230425645023363072' WHERE steam_id = '76561198093429192';`,
 `UPDATE users SET discord_id = '210689902038351872' WHERE steam_id = '76561198210640149';`,
 `UPDATE users SET discord_id = '722949456428793866' WHERE steam_id = '76561197986523664';`,
 `UPDATE users SET discord_id = '482294130857476099' WHERE steam_id = '76561199229317329';`,
@@ -115,7 +116,7 @@
 `UPDATE users SET discord_id = '256273151887933441' WHERE steam_id = '76561198067852096';`,
 `UPDATE users SET discord_id = '175727986027266048' WHERE steam_id = '76561197997023636';`,
 `UPDATE users SET discord_id = '234445177345802240' WHERE steam_id = '76561198176736103';`,
-`UPDATE users SET discord_id = '344887392974536705' WHERE steam_id = '76561198210640149 ';`,
+`UPDATE users SET discord_id = '344887392974536705' WHERE steam_id = '76561198210640149';`,
 `UPDATE users SET discord_id = '123608551850639360' WHERE steam_id = '76561198401056954';`,
 `UPDATE users SET discord_id = '643914063327264779' WHERE steam_id = '76561199084498499';`,
 `UPDATE users SET discord_id = '597475900942057498' WHERE steam_id = '76561198324701785';`,
@@ -125,7 +126,6 @@
 `UPDATE users SET discord_id = '799865614877327457' WHERE steam_id = '76561197983483070';`,
 `UPDATE users SET discord_id = '349452695783997442' WHERE steam_id = '76561199180793692';`,
 `UPDATE users SET discord_id = '335718431326470147' WHERE steam_id = '76561199083255373';`,
-`UPDATE users SET discord_id = 'not in discord as of 4/20/22' WHERE steam_id = '76561199088625415';`,
 `UPDATE users SET discord_id = '333687244181209098' WHERE steam_id = '76561198030981481';`,
 `UPDATE users SET discord_id = '795440092952002571' WHERE steam_id = '76561199128965691';`,
 `UPDATE users SET discord_id = '829643781418254337' WHERE steam_id = '76561198824795663';`,
@@ -325,7 +325,7 @@
 `UPDATE users SET discord_id = '1002360088331296778' WHERE steam_id = '76561199122125717';`,
 `UPDATE users SET discord_id = '316908288673579009' WHERE steam_id = '76561198330634342';`,
 `UPDATE users SET discord_id = '500470315403575307' WHERE steam_id = '76561199243344698';`,
-`UPDATE users SET discord_id = '402979389618257924 ' WHERE steam_id = '76561198383187757';`,
+`UPDATE users SET discord_id = '402979389618257924' WHERE steam_id = '76561198383187757';`,
 `UPDATE users SET discord_id = '531332392837971969' WHERE steam_id = '76561198916967070';`,
 `UPDATE users SET discord_id = '587393631044763689' WHERE steam_id = '76561198043024238';`,
 `UPDATE users SET discord_id = '645019096987074575' WHERE steam_id = '76561199270479861';`,
@@ -433,7 +433,7 @@
 `UPDATE users SET discord_id = '205869048653676545' WHERE steam_id = '76561198065685880';`,
 `UPDATE users SET discord_id = '277839313147002882' WHERE steam_id = '76561198048145485';`,
 `UPDATE users SET discord_id = '1150984298388799599' WHERE steam_id = '76561198973096043';`,
-`UPDATE users SET discord_id = '452204317001383936 ' WHERE steam_id = '76561198287326130';`,
+`UPDATE users SET discord_id = '452204317001383936' WHERE steam_id = '76561198287326130';`,
 `UPDATE users SET discord_id = '133472081055580160' WHERE steam_id = '76561198259220001';`,
 `UPDATE users SET discord_id = '136828088917950465' WHERE steam_id = '76561197995290546';`,
 `UPDATE users SET discord_id = '468182117730222081' WHERE steam_id = '76561198023689443';`,
@@ -465,3 +465,20 @@
 `UPDATE users SET discord_id = '762148381098639432' WHERE steam_id = '76561198294876014';`,
 `UPDATE users SET discord_id = '621426448908943370' WHERE steam_id = '76561198192994851';`,
 `UPDATE users SET discord_id = '628059921253924864' WHERE steam_id = '76561199085714453';`,
+];
+
+const db = require('./database');
+
+const Sleep = ms => new Promise(r => setTimeout(r, ms));
+
+async function Main() {
+    const n = queriesToRun.length;
+    for (let i = 0; i < n; i++) {
+	const query = queriesToRun[i];
+	console.log(i, 'of', n, query);
+	const results = await db.Query(query);
+	await Sleep(10);
+    }
+}
+
+Main();

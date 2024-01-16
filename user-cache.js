@@ -16,6 +16,8 @@ class User {
 	this.isOwner = databaseRow.is_owner;
 	this.isHighPriest = databaseRow.is_high_priest;
 	this.isCultMember = databaseRow.is_cult_member;
+	this.discordId = databaseRow.discord_id;
+	this.discordUsername = databaseRow.discord_username;
     }
 
     async SetSteamName(steamName) {
@@ -80,6 +82,22 @@ class User {
 	}
 	this.isCultMember = isCultMember;
 	await db.Query('UPDATE users SET is_cult_member = ? WHERE steam_id = ?', [this.isCultMember, this.steamId]);
+    }
+
+    async SetDiscordId(discordId) {
+	if (discordId === this.discordId) {
+	    return;
+	}
+	this.discordId = discordId;
+	await db.Query('UPDATE users SET discord_id = ? WHERE steam_id = ?', [this.discordId, this.steamId]);
+    }
+
+    async SetDiscordUsername(discordUsername) {
+	if (discordUsername === this.discordUsername) {
+	    return;
+	}
+	this.discordUsername = discordUsername;
+	await db.Query('UPDATE users SET discord_username = ? WHERE steam_id = ?', [this.discordUsername, this.steamId]);
     }
 
     async SetLastMovementTime() {
