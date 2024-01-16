@@ -119,13 +119,18 @@ async function TryToCrawlOnePair(pair) {
 	return;
     }
     const priorFailureCount = pair.consecutiveFailureCount;
-    console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
+    const debug = false;
+    if (debug) {
+	console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
+    }
     const request = { getTeamInfo: {} };
     let response;
     try {
 	response = await rustplus.OneOffRequest(pair, request);
     } catch (error) {
-	console.log('Error during rust+ request:', error);
+	if (debug) {
+	    console.log('Error during rust+ request:', error);
+	}
 	await pair.SetConsecutiveFailureCount(priorFailureCount);
 	await pair.IncrementFailureCount();
 	return;
@@ -136,8 +141,10 @@ async function TryToCrawlOnePair(pair) {
 	return;
     }
     if (response.response.error) {
-	console.log(`Error while crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
-	console.log(response.response.error);
+	if (debug) {
+	    console.log(`Error while crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
+	    console.log(response.response.error);
+	}
 	await pair.SetConsecutiveFailureCount(priorFailureCount);
 	await pair.IncrementFailureCount();
 	return;
@@ -146,7 +153,9 @@ async function TryToCrawlOnePair(pair) {
     const leaderSteamId = teamInfo.leaderSteamId.toString();
     const members = teamInfo.members;
     const server = ServerCache.GetServerByHostAndPort(pair.serverHostAndPort);
-    console.log(`Updating ${members.length} users`);
+    if (debug) {
+	console.log(`Updating ${members.length} users`);
+    }
     const teamIds = [];
     for (const member of members) {
 	const steamId = member.steamId.toString();
