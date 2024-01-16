@@ -24,6 +24,7 @@ const uuid = require('uuid');
 
 // This is the express app.
 const app = express();
+
 app.use(cors({
     credentials: true,
     origin: true,
@@ -31,7 +32,6 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.disable('x-powered-by');
-const failureRedirect = { failureRedirect: '/' };
 
 // Redirect http to https.
 app.use((request, response, next) => {
@@ -56,10 +56,10 @@ passport.use(new passportSteam.Strategy({
     realm: 'https://rustcult.com/',
     apiKey: secrets.steamWebApiKey,
 }, (identifier, profile, done) => {
-    //process.nextTick(() => {
+    process.nextTick(() => {
 	profile.identifier = identifier;
-	done(null, profile);
-    //});
+	return done(null, profile);
+    });
 }));
 
 const discordConfig = {
@@ -102,30 +102,13 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-function IsSteamAuth(a) {
-    if (!a) {
-	return false;
-    }
-    return a.provider === 'steam';
-}
-
-function GetSteamAuth(req) {
-    if (IsSteamAuth(req.user)) {
-	return req.user;
-    }
-    if (IsSteamAuth(req.account)) {
-	return req.account;
-    }
-    return null;
-}
-
 // Return the server cache record for a logged-in user's currently selected server.
 function GetSelectedServer(req) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+    if (!req.user) {
 	return null;
     }
-    const pairs = ServerPairingCache.GetAllPairingsForUser(steam.id);
+    const steamId = req.user.id;
+    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
     if (pairs.length === 0) {
 	return null;
     }
@@ -154,81 +137,61 @@ function GetSelectedServer(req) {
 // the latest user info provided in the request. Every time a logged-in
 // user loads a page that's a chance to update their user info.
 async function UpdateUserRecord(req) {
-    const steam = GetSteamAuth(req);
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(steam);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (user) {
-	await user.UpdateBasedOnSteamUserRecord(steam);
+	await user.UpdateBasedOnSteamUserRecord(req.user);
     }
 }
 
 // Landing page for non-logged-in users.
-async function SteamLoginPage(req, res) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+app.get('/', (req, res) => {
+    if (req.user) {
+	return res.redirect('/servers');
+    } else {
 	return res.sendFile('index.html', { root: 'rustcult.com/static' });
     }
-    await UpdateUserRecord(req);
-    const user = UserCache.GetUserBySteamId(steam.id);
-    if (user.discordId && user.discordUsername) {
-	await RustPlusPairPage(req, res);
-    } else {
-	await DiscordLinkingPage(req, res);
-    }
-}
-app.get('/', SteamLoginPage);
+});
 
 // Discord account linking page.
-async function DiscordLinkingPage(req, res) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+app.get('/link', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
     // Proceed even if user already linked, allowing to link a different account.
     res.sendFile('link.html', { root: 'rustcult.com/static' });
-}
-app.get('/link', passport.authenticate('steam', failureRedirect), DiscordLinkingPage);
+});
 
 // Server selection and pairing page.
-async function RustPlusPairPage(req, res) {
-    console.log('/servers');
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	console.log('isAuthenticated', req.isAuthenticated());
-	console.log(Object.keys(req).sort());
-	console.log(req.user, req.account);
-	console.log('Redirect to /');
-	return await SteamLoginPage(req, res);
+app.get('/servers', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    if (!steam.id) {
-	console.log('Redirect to /');
-	return await SteamLoginPage(req, res);
+    const steamId = req.user.id;
+    if (!steamId) {
+	return res.redirect('/');
     }
-    const user = UserCache.GetUserBySteamId(steam.id);
+    const user = UserCache.GetUserBySteamId(steamId);
     if (!user) {
-	console.log('Redirect to /');
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!user.discordId || !user.discordUsername) {
-	console.log('Redirect to /link');
-	return await DiscordLinkingPage(req, res);
+	return res.redirect('/link');
     }
-    console.log('Serving servers.html');
     res.sendFile('servers.html', { root: 'rustcult.com/static' });
-}
-app.get('/servers', passport.authenticate('steam', failureRedirect), RustPlusPairPage);
+});
 
-app.get('/me', passport.authenticate('steam', failureRedirect), async (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+app.get('/me', async (req, res) => {
+    if (!req.user) {
 	return res.json({ error: 'Not logged in' });
     }
     await UpdateUserRecord(req);
-    if (!steam.id) {
+    const steamId = req.user.id;
+    if (!steamId) {
 	return res.json({ error: 'Invalid steam ID' });
     }
-    const u = UserCache.GetUserBySteamId(steam.id);
+    const u = UserCache.GetUserBySteamId(steamId);
     if (!u) {
 	return res.json({ error: 'Unknown user.' });
     }
@@ -241,23 +204,20 @@ app.get('/me', passport.authenticate('steam', failureRedirect), async (req, res)
 });
 
 // Main map view.
-async function MapPage(req, res) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+app.get('/map', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
     const server = GetSelectedServer(req);
     if (!server) {
-	return await RustPlusPairPage(req, res);
+	return res.redirect('/servers');
     }
     res.sendFile('map.html', { root: 'rustcult.com/static' });
-}
-app.get('/map', passport.authenticate('steam', failureRedirect), MapPage);
+});
 
-app.get('/mapdata', passport.authenticate('steam', failureRedirect), async (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+app.get('/mapdata', async (req, res) => {
+    if (!req.user) {
 	return res.json({});
     }
     const selected = GetSelectedServer(req);
@@ -281,7 +241,8 @@ app.get('/mapdata', passport.authenticate('steam', failureRedirect), async (req,
 	    return res.json({ info, map });
 	}
     }
-    const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steam.id);
+    const steamId = req.user.id;
+    const pair = ServerPairingCache.GetPairingRecordFromHostPortAndSteamId(selected.host, selected.port, steamId);
     if (!pair.IsAlive()) {
 	return res.json({ info, map });
     }
@@ -364,22 +325,21 @@ function SortUsersForOwner(a, b) {
 }
 
 // The developer uses this page to ordinate the elected Mr. President as a high priest (admin) of the cult.
-app.get('/owner', passport.authenticate('steam', failureRedirect), async (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+app.get('/owner', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(steam);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (!user) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!user.isOwner) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const ownerSteamId = '76561198054245955';
     if (user.steamId !== ownerSteamId) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
     allUsers.sort(SortUsersForOwner);
@@ -398,58 +358,56 @@ app.get('/owner', passport.authenticate('steam', failureRedirect), async (req, r
 });
 
 async function UpdateHighPriestStatus(req, res, newIsHighPriest) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(steam);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (!user) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!user.isOwner) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const ownerSteamId = '76561198054245955';
     if (user.steamId !== ownerSteamId) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const targetSteamId = req.query.steamid;
     if (!targetSteamId) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (targetSteamId.length !== 17) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const target = UserCache.GetUserBySteamId(targetSteamId);
     if (!target) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     await target.SetHighPriest(newIsHighPriest);
     return res.redirect('/owner');
 }
 
-app.get('/ordinatehighpriest', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/ordinatehighpriest', async (req, res) => {
     return await UpdateHighPriestStatus(req, res, true);
 });
 
-app.get('/dismisshighpriest', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/dismisshighpriest', async (req, res) => {
     return await UpdateHighPriestStatus(req, res, false);
 });
 
 // High Priests of the clan (admins basically) use this secret page to add/remove clan members.
-app.get('/backdoor', passport.authenticate('steam', failureRedirect), async (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+app.get('/backdoor', async (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(steam);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (!user) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!user.isHighPriest) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const allUsers = UserCache.GetAllUsersAsAShallowCopiedList();
     allUsers.sort(SortUsersForOwner);
@@ -468,64 +426,62 @@ app.get('/backdoor', passport.authenticate('steam', failureRedirect), async (req
 });
 
 async function UpdateCultMemberStatus(req, res, newIsCultMember) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+    if (!req.user) {
+	return res.redirect('/');
     }
     await UpdateUserRecord(req);
-    const user = await UserCache.GetOrCreateUserFromSteamAuth(steam);
+    const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (!user) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!user.isHighPriest) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const targetSteamId = req.query.steamid;
     if (!targetSteamId) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (targetSteamId.length !== 17) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     const target = UserCache.GetUserBySteamId(targetSteamId);
     if (!target) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     await target.SetCultMember(newIsCultMember);
     return res.redirect('/backdoor');
 }
 
-app.get('/addcultmember', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/addcultmember', async (req, res) => {
     return await UpdateCultMemberStatus(req, res, true);
 });
 
-app.get('/bancultmember', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/bancultmember', async (req, res) => {
     return await UpdateCultMemberStatus(req, res, false);
 });
 
-app.get('/backdoor.css', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/backdoor.css', async (req, res) => {
     res.setHeader('Content-Type', 'text/css');
     res.sendFile('backdoor.css', { root: __dirname });
 });
 
-app.get('/selectserver', passport.authenticate('steam', failureRedirect), async (req, res) => {
+app.get('/selectserver', async (req, res) => {
     const host = req.query.host;
     const port = req.query.port;
-    const steam = GetSteamAuth(req);
-    if (!steam || !host || !port) {
-	return await SteamLoginPage(req, res);
+    if (!req.user || !host || !port) {
+	return res.redirect('/');
     }
     const hostAndPort = host + ':' + port;
     req.session.selectedServer = hostAndPort;
-    return await MapPage(req, res);
+    return res.redirect('/map');
 });
 
-app.get('/pairedservers', passport.authenticate('steam', failureRedirect), (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+app.get('/pairedservers', (req, res) => {
+    if (!req.user) {
 	return res.json({});
     }
-    const pairs = ServerPairingCache.GetAllPairingsForUser(steam.id);
+    const steamId = req.user.id;
+    const pairs = ServerPairingCache.GetAllPairingsForUser(steamId);
     const servers = [];
     for (const pair of pairs) {
 	const server = ServerCache.GetServerByHostAndPort(pair.serverHostAndPort);
@@ -542,17 +498,17 @@ app.get('/pairedservers', passport.authenticate('steam', failureRedirect), (req,
     return res.json({ servers });
 });
 
-app.get('/dots', passport.authenticate('steam', failureRedirect), (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
+app.get('/dots', (req, res) => {
+    if (!req.user) {
 	return res.json({});
     }
+    const steamId = req.user.id;
     const selected = GetSelectedServer(req);
     if (!selected) {
 	return res.json({});
     }
     const groupBases = groupBasesByServer[selected.hostAndPort] || [];
-    const dots = crawl.GetVisibleBasesAndUsers(selected.hostAndPort, steam.id, groupBases);
+    const dots = crawl.GetVisibleBasesAndUsers(selected.hostAndPort, steamId, groupBases);
     return res.json(dots);
 });
 
@@ -560,67 +516,51 @@ app.get('/dots', passport.authenticate('steam', failureRedirect), (req, res) => 
 app.use(express.static(__dirname + '/rustcult.com/static', { dotfiles: 'allow' }));
 
 // Steam login endpoints.
-async function HandleSteamLogin(req, res) {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	console.log('Steam login failed.', req.user, req.account);
-	return await SteamLoginPage(req, res);
-    }
-    console.log('Steam login success');
-    await UpdateUserRecord(req);
-    const user = UserCache.GetUserBySteamId(steam.id);
-    if (user.discordId && user.discordUsername) {
-	console.log('Redirect to /servers');
-	await RustPlusPairPage(req, res);
-    } else {
-	console.log('Redirect to /link');
-	await DiscordLinkingPage(req, res);
-    }
-}
-app.get('/login', passport.authenticate('steam', failureRedirect), HandleSteamLogin);
-app.get('/return', passport.authenticate('steam', failureRedirect), HandleSteamLogin);
+const failureRedirect = { failureRedirect: '/' };
+app.get('/login', passport.authenticate('steam', failureRedirect), (req, res) => {
+    res.redirect('/');
+});
+app.get('/return', passport.authenticate('steam', failureRedirect), (req, res) => {
+    res.redirect('/');
+});
 
 // Logout endpoint.
-app.get('/logout', passport.authenticate('steam', failureRedirect), (req, res, next) => {
-    req.logout(async (err) => {
+app.get('/logout', (req, res, next) => {
+    req.logout((err) => {
 	if (err) {
 	    return next(err);
 	} else {
-	    await SteamLoginPage(req, res);
+	    res.redirect('/');
 	}
     });
 });
 
 // Discord account linking via OAuth AUTHORIZE.
-app.get('/discordauthorize', passport.authenticate('steam', failureRedirect), passport.authorize('discord', failureRedirect));
-app.get('/discordauthorizecallback', passport.authenticate('steam', failureRedirect), passport.authorize('discord', failureRedirect), async (req, res) => {
+app.get('/discordauthorize', passport.authorize('discord', failureRedirect));
+app.get('/discordauthorizecallback', passport.authorize('discord', failureRedirect), async (req, res) => {
     const discord = req.account;
     if (!discord) {
-	return await DiscordLinkingPage(req, res);
+	return res.redirect('/');
     }
     if (!discord.id) {
-	return await DiscordLinkingPage(req, res);
+	return res.redirect('/');
     }
-    const steam = GetSteamAuth(req);
+    const steam = req.user;
     if (!steam) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     if (!steam.id) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
-    console.log('discord account');
-    console.log(discord);
-    console.log('steam account');
-    console.log(steam);
     await UpdateUserRecord(req);
     const user = UserCache.GetUserBySteamId(steam.id);
     if (!user) {
-	return await SteamLoginPage(req, res);
+	return res.redirect('/');
     }
     await user.SetDiscordId(discord.id);
     await user.SetDiscordUsername(discord.username);
     console.log('Link successful STEAMID', steam.id, 'DISCORDID', discord.id);
-    await RustPlusPairPage(req, res);
+    res.redirect('/');
 });
 
 // Helper function for the server pairing flow.
@@ -738,13 +678,13 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 // Returns the status of a logged-in user's ongoing server pairing request.
 // Starts a new server pairing request if none is ongoing and the needed
 // token is passed in as input,
-app.post('/pair', async (req, res) => {
-    const steam = GetSteamAuth(req);
-    if (!steam) {
-	return await SteamLoginPage(req, res);
+app.post('/pair', (req, res) => {
+    if (!req.user) {
+	return res.redirect('/');
     }
+    const steamId = req.user.id;
     // Get the status of this user's in-progress pairing request, if any.
-    const status = pairingStatusBySteamId[steam.id];
+    const status = pairingStatusBySteamId[steamId];
     // Initiate a new server pairing request if the client asks,
     // and there is not one already under way.
     const pairingAlreadyUnderway = status && status.status;
@@ -755,15 +695,15 @@ app.post('/pair', async (req, res) => {
 	if (parsed.error) {
 	    return res.json({ error: parsed.error });
 	}
-	if (parsed.steamId !== steam.id) {
+	if (parsed.steamId !== steamId) {
 	    return res.json({ error: 'You must pair in-game using the same Steam account' });
 	}
-	pairingStatusBySteamId[steam.id] = { status: 'Initiating server pairing' };
+	pairingStatusBySteamId[steamId] = { status: 'Initiating server pairing' };
 	// Do not await. Respond immediately with the status of the server pairing request.
 	// The client will poll for the updated status of their pairing request.
-	HandleServerPairingRequest(steam.id, parsed.token);
+	HandleServerPairingRequest(steamId, parsed.token);
     }
-    const response = pairingStatusBySteamId[steam.id] || { success: 'Follow the instructions to pair a server' };
+    const response = pairingStatusBySteamId[steamId] || { success: 'Follow the instructions to pair a server' };
     return res.json(response);
 });
 
