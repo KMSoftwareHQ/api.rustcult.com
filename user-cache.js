@@ -230,10 +230,22 @@ function GetCultMemberSteamIds() {
     return c;
 }
 
+function GetAllDiscordAccounts() {
+    const c = [];
+    for (const steamId in usersBySteamId) {
+	const user = usersBySteamId[steamId];
+	if (user.discordId) {
+	    c.push(user);
+	}
+    }
+    return c;
+}
+
 module.exports = {
     GetUserBySteamId,
     GetOrCreateUserBySteamId,
     GetOrCreateUserFromSteamAuth,
+    GetAllDiscordAccounts,
     GetAllUsersAsAShallowCopiedList,
     GetCultMemberSteamIds,
     Initialize,

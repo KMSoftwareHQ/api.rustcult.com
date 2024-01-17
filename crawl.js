@@ -28,8 +28,18 @@ const UserCache = require('./user-cache');
 // }
 const cache = {};
 
+// The last seen cache is a bit different from the regular cache. It is keyed
+// only by steam ID. It stores the last known movement of each steam ID on any
+// server.
+const lastSeenBySteamId = {};
+
 // This function gets called every time a significant user movement is detected.
 async function OnUserMovement(before, after, server, user) {
+    lastSeenBySteamId[user.steamId] = {
+	server: server.hostAndPort,
+	x: after.x,
+	y: after.y,
+    };
     const query = (
 	'REPLACE INTO player_positions ' +
 	'(server_incrementing_id, user_incrementing_id, timestamp, x, y) VALUES ' +
@@ -311,6 +321,11 @@ function GetVisibleBasesAndUsers(serverHostAndPort, userSteamId, groupBases) {
     return { bases, users };
 }
 
+function GetLastSeenRecordBySteamId(steamId) {
+    return lastSeenBySteamId[steamId] || null;
+}
+
 module.exports = {
+    GetLastSeenRecordBySteamId,
     GetVisibleBasesAndUsers,
 };

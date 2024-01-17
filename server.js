@@ -571,6 +571,24 @@ app.get('/discordauthorizefailure', (req, res) => {
     console.log('Discord link failure!');
     res.redirect('/link');
 });
+app.get('/getalldiscordaccounts', (req, res) => {
+    if (req.query.token !== 'xR7T8duYnwrM') {
+	return res.json([]);
+    }
+    const accounts = UserCache.GetAllDiscordAccounts();
+    const formattedAccounts = [];
+    for (const account of accounts) {
+	const seen = crawl.GetLastSeenRecordBySteamId(account.steamId);
+	formattedAccounts.push({
+	    discordId: account.discordId,
+	    steamId: account.steamId,
+	    server: seen ? seen.server : undefined,
+	    x: seen ? seen.x : undefined,
+	    y: seen ? seen.y : undefined,
+	});
+    }
+    res.json(formattedAccounts);
+});
 
 // Helper function for the server pairing flow.
 async function RegisterWithRustPlus(authToken, expoPushToken) {
