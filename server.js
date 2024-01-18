@@ -139,7 +139,7 @@ function GetSelectedServer(req) {
 async function UpdateUserRecord(req) {
     const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (user) {
-	await user.UpdateBasedOnSteamUserRecord(req.user);
+	//await user.UpdateBasedOnSteamUserRecord(req.user);
     }
 }
 
