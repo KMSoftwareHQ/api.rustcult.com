@@ -90,7 +90,9 @@ async function DetectUserMovement(before, after, server, user) {
 async function DetectUserEvents(before, after, server, user) {
     await DetectUserMovement(before, after, server, user);
     if (after.name) {
-	await user.SetSteamName(after.name);
+	if (!user.steamName) {
+	    await user.SetSteamName(after.name);
+	}
     }
 }
 
@@ -129,7 +131,7 @@ async function TryToCrawlOnePair(pair) {
 	return;
     }
     const priorFailureCount = pair.consecutiveFailureCount;
-    const debug = false;
+    const debug = true;
     if (debug) console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const request = { getTeamInfo: {} };
     let response;

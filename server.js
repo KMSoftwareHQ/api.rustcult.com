@@ -139,7 +139,7 @@ function GetSelectedServer(req) {
 async function UpdateUserRecord(req) {
     const user = await UserCache.GetOrCreateUserFromSteamAuth(req.user);
     if (user) {
-	//await user.UpdateBasedOnSteamUserRecord(req.user);
+	await user.UpdateBasedOnSteamUserRecord(req.user);
     }
 }
 
@@ -801,7 +801,12 @@ async function CrawlRandomSteamUser() {
 	// Do nothing.
     }
     if (response) {
-	const json = await response.json();
+	let json;
+	try {
+	    json = await response.json();
+	} catch (error) {
+	    // Do nothing.
+	}
 	if (json && json.response && json.response.players) {
 	    const players = json.response.players;
 	    if (players.length > 0) {
@@ -816,7 +821,7 @@ async function CrawlRandomSteamUser() {
 	    }
 	}
     }
-    setTimeout(CrawlRandomSteamUser, 1111);
+    setTimeout(CrawlRandomSteamUser, 9000);
 }
 
 async function Main() {

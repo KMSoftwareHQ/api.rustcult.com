@@ -116,7 +116,9 @@ class User {
 	    throw 'User steam IDs have to match to update a user record.';
 	}
 	if (reqUser.displayName) {
-	    await this.SetSteamName(reqUser.displayName);
+	    if (!this.steamName) {
+		await this.SetSteamName(reqUser.displayName);
+	    }
 	}
 	const json = reqUser._json;
 	if (!json) {
