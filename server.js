@@ -582,6 +582,7 @@ app.get('/getalldiscordaccounts', (req, res) => {
 	formattedAccounts.push({
 	    discordId: account.discordId,
 	    steamId: account.steamId,
+	    steamName: account.steamName,
 	    server: seen ? seen.server : undefined,
 	    x: seen ? seen.x : undefined,
 	    y: seen ? seen.y : undefined,
@@ -788,6 +789,36 @@ async function UpdateBaseCacheFromDatabase() {
     setTimeout(UpdateBaseCacheFromDatabase, 10 * 60 * 1000);
 }
 
+async function CrawlRandomSteamUser() {
+    const steamWebApiKey = '22A69A4E939F0D8EC4689D6CAA5D79EE';
+    const user = UserCache.GetRandomUser();
+    const steamId = user.steamId;
+    const url = `http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${steamWebApiKey}&steamids=${steamId}`;
+    let response;
+    try {
+	response = await fetch(url);
+    } catch (error) {
+	// Do nothing.
+    }
+    if (response) {
+	const json = await response.json();
+	if (json && json.response && json.response.players) {
+	    const players = json.response.players;
+	    if (players.length > 0) {
+		const p = players[0];
+		if (p.steamid === steamId) {
+		    const n = p.personaname;
+		    if (n && (typeof n === 'string') && n.length > 0) {
+			console.log(steamId, n);
+			await user.SetSteamName(n);
+		    }
+		}
+	    }
+	}
+    }
+    setTimeout(CrawlRandomSteamUser, 1111);
+}
+
 async function Main() {
     console.log('Initializing caches.');
     await UserCache.Initialize();
@@ -805,6 +836,8 @@ async function Main() {
     app.listen(80);
     // Start routinely updating the base cache with newly discovered bases.
     setTimeout(UpdateBaseCacheFromDatabase, 10 * 1000);
+    // Crawl random steam users to update their display names.
+    setTimeout(CrawlRandomSteamUser, 10 * 1000);
 }
 
 Main();

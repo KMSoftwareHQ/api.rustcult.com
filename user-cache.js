@@ -200,6 +200,15 @@ function GetUserBySteamId(steamId) {
     return usersBySteamId[steamId] || null;
 }
 
+// Gets a random user.
+function GetRandomUser() {
+    const keys = Object.keys(usersBySteamId);
+    const n = keys.length;
+    const r = Math.floor(Math.random() * n);
+    const k = keys[r];
+    return usersBySteamId[k];
+}
+
 // For debugging purposes.
 function LogAllUsers() {
     const numUsers = Object.keys(usersBySteamId).length;
@@ -242,12 +251,13 @@ function GetAllDiscordAccounts() {
 }
 
 module.exports = {
-    GetUserBySteamId,
-    GetOrCreateUserBySteamId,
-    GetOrCreateUserFromSteamAuth,
     GetAllDiscordAccounts,
     GetAllUsersAsAShallowCopiedList,
     GetCultMemberSteamIds,
+    GetOrCreateUserBySteamId,
+    GetOrCreateUserFromSteamAuth,
+    GetRandomUser,
+    GetUserBySteamId,
     Initialize,
     LogAllUsers,
 };
