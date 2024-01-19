@@ -124,7 +124,9 @@ async function TryToCrawlOnePair(pair) {
 	const age = currentTimeA - cacheRecord.lastUpdateTime;
 	if (age < 1000) {
 	    // There is already a recent cache record. Bail.
-	    return;
+	    // Commenting this out for now so that crawling is attempted
+	    // regardless of how recently this pair has been crawled.
+	    //return;
 	}
     }
     if (!pair.IsAlive()) {
@@ -195,24 +197,62 @@ async function TryToCrawlOnePair(pair) {
     }
 }
 
-async function TryToCrawlAllPairs() {
-    const pairs = ServerPairingCache.GetAllPairings();
-    const crawlPromisesForAllPairs = [];
-    for (const pair of pairs) {
-	const crawlPromiseForOnePair = TryToCrawlOnePair(pair);
-	crawlPromisesForAllPairs.push(crawlPromiseForOnePair);
+// Randomize array in-place using Durstenfeld shuffle algorithm.
+function ShuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+	var j = Math.floor(Math.random() * (i + 1));
+	var temp = array[i];
+	array[i] = array[j];
+	array[j] = temp;
     }
-    // Crawl all pairs simultaneously to gain parallelism.
-    await Promise.allSettled(crawlPromisesForAllPairs);
 }
 
-async function DoCrawl() {
-    await TryToCrawlAllPairs();
-    setTimeout(DoCrawl, 1);
+async function TryToCrawlServer(server) {
+    const startTime = Date.now();
+    const serverPairs = ServerPairingCache.GetAllPairingsForServer(server.hostAndPort);
+    if (serverPairs.length > 0) {
+	// Determine which pair hasn't been crawled for the longest time.
+	ShuffleArray(serverPairs);
+	let mostStalePair;
+	let mostStaleTimestamp;
+	for (const pair of serverPairs) {
+	    const cacheRecord = GetCache(pair.serverHostAndPort, pair.userSteamId);
+	    if (cacheRecord) {
+		if (!mostStaleTimestamp || cacheRecord.lastUpdateTime < mostStaleTimestamp) {
+		    mostStalePair = pair;
+		    mostStaleTimestamp = cacheRecord.lastUpdateTime;
+		}
+	    } else {
+		mostStalePair = pair;
+		break;
+	    }
+	}
+	await TryToCrawlOnePair(mostStalePair);
+    }
+    // Schedule self to run again later.
+    const endTime = Date.now();
+    const minimumTimeBetweenRequests = 111;
+    const earliestTimeForNextRequest = startTime + minimumTimeBetweenRequests;
+    const sleepTime = Math.max(1, earliestTimeForNextRequest - endTime);
+    setTimeout(() => TryToCrawlServer(server), sleepTime);
+}
+
+const serverCrawlersAlreadyStarted = {};
+
+async function StartCrawl() {
+    const servers = ServerCache.GetAllServers();
+    for (const server of servers) {
+	if (server.hostAndPort in serverCrawlersAlreadyStarted) {
+	    continue;
+	}
+	console.log('Starting Rust+ crawler for', server.name, server.hostAndPort);
+	serverCrawlersAlreadyStarted[server.hostAndPort] = true;
+	await TryToCrawlServer(server);
+    }
 }
 
 // Wait a few seconds before starting the crawl.
-setTimeout(DoCrawl, 5 * 1000);
+setInterval(StartCrawl, 10 * 1000);
 
 // Helper function that filters bases by owner. Adds the matching
 // bases to a given list, and returns the non-matching bases.

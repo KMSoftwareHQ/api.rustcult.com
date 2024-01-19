@@ -151,6 +151,10 @@ async function Initialize() {
     serversByHostAndPort = newCache;
 }
 
+function GetAllServers() {
+    return Object.values(serversByHostAndPort);
+}
+
 async function CreateNewServerInDatabase(message) {
     if (!message || !message.ip || !message.port) {
 	throw 'Creating new server in the database requires a valid server pairing notification.';
@@ -205,6 +209,7 @@ function LogAllKnownServers() {
 }
 
 module.exports = {
+    GetAllServers,
     GetServerByHostAndPort,
     GetServerRecordFromPairingNotification,
     Initialize,
