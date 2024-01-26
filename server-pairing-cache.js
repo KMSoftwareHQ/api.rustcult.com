@@ -20,7 +20,7 @@ class ServerPairing {
 	    [this.token, this.serverHostAndPort, this.userSteamId]);
 	// If we get here, it means that the token has changed in value. So then reset the failure count.
 	await this.SetConsecutiveFailureCount(0);
-	await this.SetNextRetryTime(currentTime.format());
+	await this.SetNextRetryTime(moment().format());
     }
 
     async SetConsecutiveFailureCount(consecutiveFailureCount) {

@@ -133,7 +133,7 @@ async function TryToCrawlOnePair(pair) {
 	return;
     }
     const priorFailureCount = pair.consecutiveFailureCount;
-    const debug = true;
+    const debug = false;
     if (debug) console.log(`Crawling ${pair.serverHostAndPort} ${pair.userSteamId}`);
     const request = { getTeamInfo: {} };
     let response;

@@ -677,17 +677,20 @@ async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
 
     // Step 4. Listen for the user to press the Pair button in-game.
     pairingStatusBySteamId[steamId] = { status: 'Trying to listen for the Pair button in-game' };
+    console.log('Trying to listen for the Pair button in-game');
     const fcmClient = await PushReceiver.listen(fcmCredentials, async ({ notification, persistentId }) => {
+	//console.log('Received FCM notification:', notification);
 	const body = JSON.parse(notification.data.body);
-	console.log('Received FCM notification:', JSON.stringify(body));
+	//console.log('Parsed FCM notification:', JSON.stringify(body));
 	if (body.playerToken) {
-	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
+	    pairingStatusBySteamId[steamId] = { status: 'Rust+ token received' };
 	    const serverRecord = await ServerCache.GetServerRecordFromPairingNotification(body);
 	    await serverRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
-	    //console.log('Server record from cache:', serverRecord.name);
+	    //console.log('Server record from cache:', serverRecord);
 	    const pairingRecord = await ServerPairingCache.GetPairingRecordFromPairingNotification(body);
 	    await pairingRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
-	    //console.log('Pairing record from cache:', pairingRecord.token);
+	    //console.log('Pairing record from cache:', pairingRecord);
+	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
 	}
     });
     pairingStatusBySteamId[steamId] = { status: 'Press the Pair button in-game' };
@@ -825,6 +828,7 @@ async function CrawlRandomSteamUser() {
 }
 
 async function Main() {
+    console.log('Starting server with node version', process.version);
     console.log('Initializing caches.');
     await UserCache.Initialize();
     await ServerCache.Initialize();
