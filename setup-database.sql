@@ -14,6 +14,10 @@ CREATE TABLE users (
   is_cult_member BOOLEAN,
   discord_id VARCHAR(64),
   discord_username VARCHAR(128),
+  last_seen_alive_time TIMESTAMP,
+  last_seen_alive_server VARCHAR(128),
+  last_seen_alive_x FLOAT,
+  last_seen_alive_y FLOAT,
   PRIMARY KEY (incrementing_id),
   INDEX (steam_id),
   UNIQUE (steam_id)

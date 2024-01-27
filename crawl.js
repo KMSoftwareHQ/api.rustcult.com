@@ -92,11 +92,9 @@ async function DetectUserMovement(before, after, server, user) {
 // Detect user movement, death, spawn, etc.
 async function DetectUserEvents(before, after, server, user) {
     await DetectUserMovement(before, after, server, user);
-    //if (after.name) {
-    //    if (!user.steamName) {
-    //        await user.SetSteamName(after.name);
-    //    }
-    //}
+    if (after && after.isAlive && after.x && after.y) {
+	await user.SetLastSeenAlive(server.hostAndPort, after.x, after.y);
+    }
 }
 
 async function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {

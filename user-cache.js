@@ -18,8 +18,12 @@ class User {
 	this.isCultMember = databaseRow.is_cult_member;
 	this.discordId = databaseRow.discord_id;
 	this.discordUsername = databaseRow.discord_username;
+	this.lastSeenAliveTime = databaseRow.last_seen_alive_time;
+	this.lastSeenAliveServer = databaseRow.last_seen_alive_server;
+	this.lastSeenAliveX = databaseRow.last_seen_alive_x;
+	this.lastSeenAliveY = databaseRow.last_seen_alive_y;
     }
-
+    
     async SetSteamName(steamName) {
 	if (steamName === this.steamName) {
 	    return;
@@ -108,6 +112,15 @@ class User {
     async SetLastBaseDetectionTime() {
 	this.lastBaseDetectionTime = moment().format();
 	await db.Query('UPDATE users SET last_base_detection_time = ? WHERE steam_id = ?', [this.lastBaseDetectionTime, this.steamId]);
+    }
+
+    async SetLastSeenAlive(server, x, y) {
+	const t = moment().format();
+	this.lastSeenAliveTime = t;
+	this.lastSeenAliveServer = server;
+	this.lastSeenAliveX = x;
+	this.lastSeenAliveY = y;
+	await db.Query('UPDATE users SET last_seen_alive_time = ?, last_seen_alive_server = ?, last_seen_alive_x = ?, last_seen_alive_y = ? WHERE steam_id = ?', [t, server, x, y, this.steamId]);
     }
 
     // Updates the fields in this cached user, and also the database, based on the record of a logged-in Steam user.
