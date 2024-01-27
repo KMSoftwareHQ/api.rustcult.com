@@ -578,14 +578,14 @@ app.get('/getalldiscordaccounts', (req, res) => {
     const accounts = UserCache.GetAllDiscordAccounts();
     const formattedAccounts = [];
     for (const account of accounts) {
-	const seen = crawl.GetLastSeenRecordBySteamId(account.steamId);
 	formattedAccounts.push({
 	    discordId: account.discordId,
 	    steamId: account.steamId,
 	    steamName: account.steamName,
-	    server: seen ? seen.server : undefined,
-	    x: seen ? seen.x : undefined,
-	    y: seen ? seen.y : undefined,
+	    server: account.lastSeenAliveServer ? account.lastSeenAliveServer : undefined,
+	    x: account.lastSeenAliveX ? account.lastSeenAliveX : undefined,
+	    y: account.lastSeenAliveY ? account.lastSeenAliveY : undefined,
+	    lastSeenAliveTime: account.lastSeenAliveTime ? account.lastSeenAliveTime : undefined,
 	});
     }
     res.json(formattedAccounts);
