@@ -211,8 +211,10 @@ async function TryToCrawlServer(server) {
     const startTime = Date.now();
     const serverPairs = ServerPairingCache.GetAllPairingsForServer(server.hostAndPort);
     if (serverPairs.length > 0) {
-	// Determine which pair hasn't been crawled for the longest time.
+	// Shuffle the pairings for this server to stop one from starving all the others
+	// by going first in case of an unexpected error.
 	ShuffleArray(serverPairs);
+	// Determine which pair hasn't been crawled for the longest time.
 	let mostStalePair;
 	let mostStaleTimestamp;
 	for (const pair of serverPairs) {
