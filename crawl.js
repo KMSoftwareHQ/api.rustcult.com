@@ -64,7 +64,7 @@ async function DetectUserMovement(before, after, server, user) {
     if (!before || !after || !server || !user) {
 	return;
     }
-    if (!after.isAlive || !after.isOnline) {
+    if (!after.isAlive) {
 	return;
     }
     if (!before.x || !before.y || !after.x || !after.y) {
