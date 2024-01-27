@@ -31,11 +31,11 @@ const cache = {};
 // The last seen cache is a bit different from the regular cache. It is keyed
 // only by steam ID. It stores the last known movement of each steam ID on any
 // server.
-const lastSeenBySteamId = {};
+const lastSeenAliveBySteamId = {};
 
 // This function gets called every time a significant user movement is detected.
 async function OnUserMovement(before, after, server, user) {
-    lastSeenBySteamId[user.steamId] = {
+    lastSeenAliveBySteamId[user.steamId] = {
 	server: server.hostAndPort,
 	x: after.x,
 	y: after.y,
@@ -64,6 +64,9 @@ async function DetectUserMovement(before, after, server, user) {
     if (!before || !after || !server || !user) {
 	return;
     }
+    if (!after.isAlive || !after.isOnline) {
+	return;
+    }
     if (!before.x || !before.y || !after.x || !after.y) {
 	return;
     }
@@ -89,11 +92,11 @@ async function DetectUserMovement(before, after, server, user) {
 // Detect user movement, death, spawn, etc.
 async function DetectUserEvents(before, after, server, user) {
     await DetectUserMovement(before, after, server, user);
-    if (after.name) {
-	if (!user.steamName) {
-	    await user.SetSteamName(after.name);
-	}
-    }
+    //if (after.name) {
+    //    if (!user.steamName) {
+    //        await user.SetSteamName(after.name);
+    //    }
+    //}
 }
 
 async function UpdateCache(serverHostAndPort, userSteamId, newCacheRecord) {
@@ -366,7 +369,7 @@ function GetVisibleBasesAndUsers(serverHostAndPort, userSteamId, groupBases) {
 }
 
 function GetLastSeenRecordBySteamId(steamId) {
-    return lastSeenBySteamId[steamId] || null;
+    return lastSeenAliveBySteamId[steamId] || null;
 }
 
 module.exports = {
