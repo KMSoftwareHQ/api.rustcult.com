@@ -2,6 +2,7 @@
 const cluster = require('./cluster');
 const cors = require('cors');
 const crawl = require('./crawl');
+let d3 = import('d3-quadtree');
 const db = require('./database');
 const DiscordStrategy = require('passport-discord').Strategy;
 const express = require('express');
@@ -580,6 +581,7 @@ app.get('/getalldiscordaccounts', (req, res) => {
     for (const account of accounts) {
 	const secondsSinceLastMovement = account.GetSecondsSinceLastMovement();
 	const secondsSinceBreadcrumb = account.GetSecondsSinceBreadcrumb();
+	const howManyBasesNearby = HowManyBasesNearby(account.lastSeenAliveServer, account.lastSeenAliveX, account.lastSeenAliveY);
 	formattedAccounts.push({
 	    discordId: account.discordId,
 	    steamId: account.steamId,
@@ -590,6 +592,7 @@ app.get('/getalldiscordaccounts', (req, res) => {
 	    lastSeenAliveTime: account.lastSeenAliveTime ? account.lastSeenAliveTime : undefined,
 	    secondsSinceLastMovement: secondsSinceLastMovement < 3600 ? secondsSinceLastMovement : undefined,
 	    secondsSinceBreadcrumb: secondsSinceBreadcrumb < 3600 ? secondsSinceBreadcrumb : undefined,
+	    howManyBasesNearby: howManyBasesNearby ? howManyBasesNearby : undefined,
 	});
     }
     res.json(formattedAccounts);
@@ -744,6 +747,7 @@ app.post('/pair', (req, res) => {
 
 let playerBasesByServer = {};
 let groupBasesByServer = {};
+let quadtreeByServer = {};
 
 async function UpdatePlayerBases() {
     const query = (
@@ -787,6 +791,11 @@ async function UpdateGroupBases() {
 	const groupBases = cluster.Cluster(playerBases);
 	console.log(`Clustering bases on server ${serverKey} ${playerBases.length} -> ${groupBases.length}`);
 	groupBasesByServer[serverKey] = groupBases;
+	const tree = d3.quadtree();
+	for (const base of groupBases) {
+	    tree.add([base.x, base.y]);
+	}
+	quadtreeByServer[serverKey] = tree;
     }
 }
 
@@ -794,6 +803,38 @@ async function UpdateBaseCacheFromDatabase() {
     await UpdatePlayerBases();
     await UpdateGroupBases();
     setTimeout(UpdateBaseCacheFromDatabase, 10 * 60 * 1000);
+}
+
+function HowManyBasesNearby(server, x, y) {
+    if (!server || !x || !y) {
+	return 0;
+    }
+    if (!(server in quadtreeByServer)) {
+	return 0;
+    }
+    const tree = quadtreeByServer[server];
+    const r = 300;
+    const xmin = x - r;
+    const ymin = y - r;
+    const xmax = x + r;
+    const ymax = y + r;
+    let count = 0;
+    tree.visit((node, x1, y1, x2, y2) => {
+	if (node.length) {
+	    return x1 >= xmax || y1 >= ymax || x2 < xmin || y2 < ymin;
+	}
+	do {
+	    let d = node.data;
+	    if (d[0] >= xmin && d[0] < xmax && d[1] >= ymin && d[1] < ymax) {
+		const dx = Math.abs(x - d[0]);
+		const dy = Math.abs(y - d[1]);
+		if (dx < r && dy < r) {
+		    count++;
+		}
+	    }
+	} while (node = node.next);
+    });
+    return count;
 }
 
 async function CrawlRandomSteamUser() {
@@ -832,6 +873,8 @@ async function CrawlRandomSteamUser() {
 }
 
 async function Main() {
+    // Dunno what kind of magic this is but it stops an error.
+    d3 = await d3;
     console.log('Starting server with node version', process.version);
     console.log('Initializing caches.');
     await UserCache.Initialize();
