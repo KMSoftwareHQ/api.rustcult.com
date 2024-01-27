@@ -18,6 +18,9 @@ CREATE TABLE users (
   last_seen_alive_server VARCHAR(128),
   last_seen_alive_x FLOAT,
   last_seen_alive_y FLOAT,
+  breadcrumb_time FLOAT,
+  breadcrumb_x FLOAT,
+  breadcrumb_y FLOAT,
   PRIMARY KEY (incrementing_id),
   INDEX (steam_id),
   UNIQUE (steam_id)

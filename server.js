@@ -578,6 +578,8 @@ app.get('/getalldiscordaccounts', (req, res) => {
     const accounts = UserCache.GetAllDiscordAccounts();
     const formattedAccounts = [];
     for (const account of accounts) {
+	const secondsSinceLastMovement = account.GetSecondsSinceLastMovement();
+	const secondsSinceBreadcrumb = account.GetSecondsSinceBreadcrumb();
 	formattedAccounts.push({
 	    discordId: account.discordId,
 	    steamId: account.steamId,
@@ -586,6 +588,8 @@ app.get('/getalldiscordaccounts', (req, res) => {
 	    x: account.lastSeenAliveX ? account.lastSeenAliveX : undefined,
 	    y: account.lastSeenAliveY ? account.lastSeenAliveY : undefined,
 	    lastSeenAliveTime: account.lastSeenAliveTime ? account.lastSeenAliveTime : undefined,
+	    secondsSinceLastMovement: secondsSinceLastMovement < 3600 ? secondsSinceLastMovement : undefined,
+	    secondsSinceBreadcrumb: secondsSinceBreadcrumb < 3600 ? secondsSinceBreadcrumb : undefined,
 	});
     }
     res.json(formattedAccounts);

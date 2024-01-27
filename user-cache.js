@@ -22,6 +22,9 @@ class User {
 	this.lastSeenAliveServer = databaseRow.last_seen_alive_server;
 	this.lastSeenAliveX = databaseRow.last_seen_alive_x;
 	this.lastSeenAliveY = databaseRow.last_seen_alive_y;
+	this.breadcrumbTime = databaseRow.breadcrumb_time;
+	this.breadcrumbX = databaseRow.breadcrumb_x;
+	this.breadcrumbY = databaseRow.breadcrumb_y;
     }
     
     async SetSteamName(steamName) {
@@ -116,11 +119,51 @@ class User {
 
     async SetLastSeenAlive(server, x, y) {
 	const t = moment().format();
+	const breadcrumbDistance = 10;
+	if (!this.breadcrumbTime ||
+	    !this.breadcrumbX ||
+	    !this.breadcrumbY ||
+	    this.lastSeenAliveServer !== server ||
+	    Math.abs(x - this.breadcrumbX) > breadcrumbDistance ||
+	    Math.abs(y - this.breadcrumbY) > breadcrumbDistance) {
+	    this.breadcrumbTime = t;
+	    this.breadcrumbX = x;
+	    this.breadcrumbY = y;
+	    
+	}
 	this.lastSeenAliveTime = t;
 	this.lastSeenAliveServer = server;
 	this.lastSeenAliveX = x;
 	this.lastSeenAliveY = y;
-	await db.Query('UPDATE users SET last_seen_alive_time = ?, last_seen_alive_server = ?, last_seen_alive_x = ?, last_seen_alive_y = ? WHERE steam_id = ?', [t, server, x, y, this.steamId]);
+	const sql = ('UPDATE users SET ' +
+		     'last_seen_alive_time = ?, ' +
+		     'last_seen_alive_server = ?, ' +
+		     'last_seen_alive_x = ?, ' +
+		     'last_seen_alive_y = ?, ' +
+		     'breadcrumb_time = ?, ' +
+		     'breadcrumb_x = ?, ' +
+		     'breadcrumb_y = ? ' +
+		     'WHERE steam_id = ?');
+	const values = [t, server, x, y, this.breadcrumbTime, this.breadcrumbX, this.breadcrumbY, this.steamId];
+	await db.Query(sql, values);
+    }
+
+    GetSecondsSinceBreadcrumb() {
+	const currentEpoch = moment().unix();
+	if (!this.breadcrumbTime) {
+	    return currentEpoch;
+	}
+	const breadcrumbEpoch = moment(this.breadcrumbTime).unix();
+	return currentEpoch - breadcrumbEpoch;
+    }
+
+    GetSecondsSinceLastMovement() {
+	const currentEpoch = moment().unix();
+	if (!this.lastMovementTime) {
+	    return currentEpoch;
+	}
+	const lastMovementEpoch = moment(this.lastMovementTime).unix();
+	return currentEpoch - lastMovementEpoch;
     }
 
     // Updates the fields in this cached user, and also the database, based on the record of a logged-in Steam user.
