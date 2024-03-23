@@ -283,12 +283,7 @@ function GetVisibleBasesAndUsers(serverHostAndPort, userSteamId, groupBases) {
     bases.self = [];
     groupBases = FilterBasesByOwner(groupBases, userSteamId, bases.self);
     const allianceSteamIds = UserCache.GetCultMemberSteamIds();
-    let inAlliance = false;
-    for (const ally of self.team) {
-	if (allianceSteamIds.includes(ally)) {
-	    inAlliance = true;
-	}
-    }
+    let inAlliance = allianceSteamIds.includes(userSteamId);
     const visibleIds = [];
     users.team = [];
     bases.team = [];
@@ -338,7 +333,7 @@ function GetVisibleBasesAndUsers(serverHostAndPort, userSteamId, groupBases) {
 	}
     }
     const userCacheRecord = UserCache.GetUserBySteamId(userSteamId);
-    if (userCacheRecord && userCacheRecord.isHighPriest) {
+    if (inAlliance && userCacheRecord) {  // && userCacheRecord.isHighPriest) {
 	users.enemies = [];
 	bases.enemies = groupBases;
 	for (const enemyId in serverCache) {
