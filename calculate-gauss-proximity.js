@@ -1,4 +1,5 @@
 const db = require('./database');
+const moment = require('moment');
 
 const sessionTimeout = 60 * 1000;
 let footstepQueueByServerAndUserId = {};
@@ -213,11 +214,25 @@ function DecayRelationshipsOncePerDay(t) {
     }
 }
 
+const userIncrementingIdToSteamId = {};
+
+async function PopulateSteamIds() {
+    const sql = 'SELECT incrementing_id, steam_id FROM users';
+    const results = await db.Query(sql);
+    for (const row of results) {
+	const iid = row.incrementing_id;
+	const steamId = row.steam_id;
+	userIncrementingIdToSteamId[iid] = steamId;
+    }
+}
+
 function IndividualActivityPointsSummary() {
     const sortable = [];
     for (const i in individualActivityPoints) {
-	const p = individualActivityPoints[i];
-	sortable.push({ i, p });
+	sortable.push({
+	    i: userIncrementingIdToSteamId[i],
+	    p: individualActivityPoints[i],
+	});
     }
     sortable.sort((a, b) => {
 	if (a.p < b.p) {
@@ -240,12 +255,39 @@ function IndividualActivityPointsSummary() {
     }
 }
 
+function PrintAllIndividualActivityPoints() {
+    const sortable = [];
+    for (const i in individualActivityPoints) {
+	sortable.push({
+	    i: userIncrementingIdToSteamId[i],
+	    p: individualActivityPoints[i],
+	});
+    }
+    sortable.sort((a, b) => {
+	if (a.p < b.p) {
+	    return 1;
+	}
+	if (a.p > b.p) {
+	    return -1;
+	}
+	return 0;
+    });
+    const n = sortable.length;
+    console.log('All individual activity points:');
+    for (const a of sortable) {
+	console.log(a.i.toString() + ',' + a.p.toString());
+    }
+}
+
 function RelationshipSummary() {
     const sortable = [];
     for (const i in relationships) {
 	for (const j in relationships[i]) {
-	    const r = relationships[i][j];
-	    sortable.push({ i, j, r });
+	    sortable.push({
+		i: userIncrementingIdToSteamId[i],
+		j: userIncrementingIdToSteamId[j],
+		r: relationships[i][j],
+	    });
 	}
     }
     sortable.sort((a, b) => {
@@ -273,8 +315,11 @@ function PrintRelationships() {
     const sortable = [];
     for (const i in relationships) {
 	for (const j in relationships[i]) {
-	    const r = relationships[i][j];
-	    sortable.push({ i, j, r });
+	    sortable.push({
+		i: userIncrementingIdToSteamId[i],
+		j: userIncrementingIdToSteamId[j],
+		r: relationships[i][j],
+	    });
 	}
     }
     sortable.sort((a, b) => {
@@ -290,55 +335,56 @@ function PrintRelationships() {
     console.log(n, 'All relationships');
     for (const a of sortable) {
 	if (a.r > 0.1) {
-	    console.log(a.r, a.i, a.j);
+	    console.log(a.i + ',' + a.j + ',' + a.r.toString());
 	}
     }
 }
 
 async function Main() {
-    const sql = `SELECT * FROM player_positions WHERE timestamp > '2024-03-07' ORDER BY timestamp`;
-    console.log('Starting query');
-    const results = await db.Query(sql);
-    const n = results.length;
-    console.log('Query finished. Got', n, 'footsteps');
+    //const startDate = moment('2022-11-01');
+    const startDate = moment('2024-03-20');
+    const endDate = moment().add(1, 'days');
+    console.log('Backfill script will process the following date range in 1 day intervals');
+    console.log('startDate', startDate);
+    console.log('endDate', endDate);
+    let currentlyProcessingDate = moment(startDate);
     let timeCursor;
     let secondsProcessed = 0;
     let maxQueueLength = 0;
-    let t;
-    let rowCount = 0;
-    for (const row of results) {
-	t = row.timestamp.getTime();
-	if (!timeCursor) {
-	    timeCursor = t;
-	}
-	QueueFootstep(row.server_incrementing_id, row.user_incrementing_id, t, row.x, row.y);
-	while (timeCursor < t - sessionTimeout) {
-	    ProcessOneSecond(timeCursor);
-	    secondsProcessed++;
-	    timeCursor += 1000;
-	}
-	const queueLength = CountQueue();
-	maxQueueLength = Math.max(queueLength, maxQueueLength);
-	PopOldFootsteps(timeCursor);
-	rowCount++;
-	if (rowCount % 10000 === 0) {
-	    console.log(rowCount, 'of', n, (100 * rowCount / n).toFixed(2), '%');
+    while (currentlyProcessingDate.isBefore(endDate)) {
+	const windowStart = currentlyProcessingDate.format('YYYY-MM-DD');
+	currentlyProcessingDate.add(1, 'days');
+	const windowEnd = currentlyProcessingDate.format('YYYY-MM-DD');
+	const sql = `SELECT * FROM player_positions WHERE timestamp >= ? AND timestamp < ? ORDER BY timestamp`;
+	const values = [windowStart, windowEnd];
+	const results = await db.Query(sql, values);
+	const n = results.length;
+	console.log('Processing', windowStart, 'to', windowEnd, '(', n, 'footprints', ')');
+	for (const row of results) {
+	    const t = row.timestamp.getTime();
+	    if (!timeCursor) {
+		timeCursor = t;
+	    }
+	    QueueFootstep(row.server_incrementing_id, row.user_incrementing_id, t, row.x, row.y);
+	    while (timeCursor < t - sessionTimeout) {
+		ProcessOneSecond(timeCursor);
+		secondsProcessed++;
+		timeCursor += 1000;
+	    }
+	    const queueLength = CountQueue();
+	    maxQueueLength = Math.max(queueLength, maxQueueLength);
+	    PopOldFootsteps(timeCursor);
 	}
     }
-    const finalT = t;
-    while (timeCursor < finalT) {
-	ProcessOneSecond(timeCursor);
-	secondsProcessed++;
-	timeCursor += 1000;
-    }
-    PopOldFootsteps(timeCursor);
     const finalQueueLength = CountQueue();
     console.log('maxQueueLength', maxQueueLength, 'finalQueueLength', finalQueueLength);
     const daysProcessed = secondsProcessed / 3600 / 24;
     console.log('Processed', secondsProcessed, 'seconds (', daysProcessed, 'days)');
     console.log('maxMovingUsers', maxMovingUsers);
+    await PopulateSteamIds();
     IndividualActivityPointsSummary();
     RelationshipSummary();
+    PrintAllIndividualActivityPoints();
     PrintRelationships();
     await db.End();
 }
