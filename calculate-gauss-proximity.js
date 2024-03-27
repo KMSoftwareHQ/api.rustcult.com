@@ -95,13 +95,55 @@ function ProcessOneSecondOnOneServer(t, serverId) {
 	const d2 = dx * dx + dy * dy;
 	if (d2 > minMovementSq && d2 < maxMovementSq && dt < sessionTimeout) {
 	    const r = (t - from.t) / dt;
+	    const interpolatedX = r * to.x + (1 - r) * from.x;
+	    const interpolatedY = r * to.y + (1 - r) * from.y;
+	    OneMovingUserDetected(userId, interpolatedX, interpolatedY, t, footstepsByUser[userId]);
 	    moving[userId] = {
-		x: r * to.x + (1 - r) * from.x,
-		y: r * to.y + (1 - r) * from.y,
+		x: interpolatedX,
+		y: interpolatedY,
 	    };
 	}
     }
-    MovingUsersDetected(moving);
+    MovingUsersDetected(moving, t);
+}
+
+// Update individual movement points.
+function OneMovingUserDetected(userId, x, y, t, footsteps) {
+    const macro = DetectMacroMovement(x, y, footsteps);
+    if (macro) {
+	GiveActivityPointToUser(userId);
+    }
+}
+
+// This movement threshold is intended to make individual movement points difficult
+// to AFK farm. Points are only given when the player is out and about the map making
+// macroscopic movements. No points are given for players inside a small contained
+// volume such as their home base, even if they are making small movements. Crucially,
+// this limitation does not apply to the relationship points that are used for
+// calculating the social structure. A bunch of players nearby each other trying to
+// cheat the system (in vain) by using shake-bots is proof that those players have
+// a strong relationship, is it not? In practice, most such close duos and trios will
+// already be adjacent to each other in the social structure. So the use of shake-bots
+// is not expected to affect either the structure or the individual rank points. This
+// threshold is necessary since without it, the points would be easily farmable and the
+// first person to figure it out would shoot to the top of the structure, embarassing the
+// whole system.
+function DetectMacroMovement(x, y, footsteps) {
+    const minDisplacementToGetMovementPoints = 10;
+    const sq = minDisplacementToGetMovementPoints * minDisplacementToGetMovementPoints;
+    for (const footstep of footsteps) {
+	const dx = footstep.x - x;
+	const dy = footstep.y - y;
+	const d2 = (dx * dx) + (dy * dy);
+	if (d2 > sq) {
+	    // The player ventured further than 10m from their present location.
+	    // That is a macro movement.
+	    return true;
+	}
+    }
+    // The player does not venture further than 10m from the spot they are currently standing.
+    // This is not macro movement.
+    return false;
 }
 
 function Gauss(x) {
@@ -111,7 +153,7 @@ function Gauss(x) {
 
 let maxMovingUsers = 0;
 
-function MovingUsersDetected(moving) {
+function MovingUsersDetected(moving, t) {
     const users = Object.keys(moving);
     users.sort();
     const n = users.length;
@@ -131,6 +173,13 @@ function MovingUsersDetected(moving) {
 	    AddToRelationship(ui, uj, g);
 	}
     }
+}
+
+const individualActivityPoints = {};
+
+function GiveActivityPointToUser(userId) {
+    const p = individualActivityPoints[userId] || 0;
+    individualActivityPoints[userId] = p + 1;
 }
 
 const relationships = {};
@@ -154,10 +203,40 @@ function DecayRelationshipsOncePerDay(t) {
 	return;
     }
     lastDecayTime = t;
+    for (const i in individualActivityPoints) {
+	individualActivityPoints[i] *= decayMultiplier;
+    }
     for (const i in relationships) {
 	for (const j in relationships[i]) {
 	    relationships[i][j] *= decayMultiplier;
 	}
+    }
+}
+
+function IndividualActivityPointsSummary() {
+    const sortable = [];
+    for (const i in individualActivityPoints) {
+	const p = individualActivityPoints[i];
+	sortable.push({ i, p });
+    }
+    sortable.sort((a, b) => {
+	if (a.p < b.p) {
+	    return 1;
+	}
+	if (a.p > b.p) {
+	    return -1;
+	}
+	return 0;
+    });
+    const n = sortable.length;
+    console.log(n, 'players');
+    console.log('TOP 10');
+    for (const a of sortable.slice(0, 10)) {
+	console.log(a);
+    }
+    console.log('BOTTOM 10');
+    for (const a of sortable.slice(n - 10, n)) {
+	console.log(a);
     }
 }
 
@@ -191,13 +270,6 @@ function RelationshipSummary() {
 }
 
 function PrintRelationships() {
-//    console.log('ALL RELATIONSHIPS');
-//    for (const i in relationships) {
-//	for (const j in relationships[i]) {
-//	    const r = relationships[i][j];
-//	    console.log(i, j, r);
-//	}
-//    }
     const sortable = [];
     for (const i in relationships) {
 	for (const j in relationships[i]) {
@@ -217,12 +289,14 @@ function PrintRelationships() {
     const n = sortable.length;
     console.log(n, 'All relationships');
     for (const a of sortable) {
-	console.log(a.r, a.i, a.j);
+	if (a.r > 0.1) {
+	    console.log(a.r, a.i, a.j);
+	}
     }
 }
 
 async function Main() {
-    const sql = `SELECT * FROM player_positions WHERE timestamp > '2023-12-01' ORDER BY timestamp`;
+    const sql = `SELECT * FROM player_positions WHERE timestamp > '2024-03-07' ORDER BY timestamp`;
     console.log('Starting query');
     const results = await db.Query(sql);
     const n = results.length;
@@ -263,6 +337,7 @@ async function Main() {
     const daysProcessed = secondsProcessed / 3600 / 24;
     console.log('Processed', secondsProcessed, 'seconds (', daysProcessed, 'days)');
     console.log('maxMovingUsers', maxMovingUsers);
+    IndividualActivityPointsSummary();
     RelationshipSummary();
     PrintRelationships();
     await db.End();
