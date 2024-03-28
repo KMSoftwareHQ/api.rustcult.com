@@ -98,22 +98,17 @@ function ProcessOneSecondOnOneServer(t, serverId) {
 	    const r = (t - from.t) / dt;
 	    const interpolatedX = r * to.x + (1 - r) * from.x;
 	    const interpolatedY = r * to.y + (1 - r) * from.y;
-	    OneMovingUserDetected(userId, interpolatedX, interpolatedY, t, footstepsByUser[userId]);
-	    moving[userId] = {
-		x: interpolatedX,
-		y: interpolatedY,
-	    };
+	    const macro = DetectMacroMovement(interpolatedX, interpolatedY, footstepsByUser[userId]);
+	    if (macro) {
+		GiveActivityPointToUser(userId);
+		moving[userId] = {
+		    x: interpolatedX,
+		    y: interpolatedY,
+		};
+	    }
 	}
     }
     MovingUsersDetected(moving, t);
-}
-
-// Update individual movement points.
-function OneMovingUserDetected(userId, x, y, t, footsteps) {
-    const macro = DetectMacroMovement(x, y, footsteps);
-    if (macro) {
-	GiveActivityPointToUser(userId);
-    }
 }
 
 // This movement threshold is intended to make individual movement points difficult
@@ -341,8 +336,7 @@ function PrintRelationships() {
 }
 
 async function Main() {
-    //const startDate = moment('2022-11-01');
-    const startDate = moment('2024-03-20');
+    const startDate = moment('2022-11-01');
     const endDate = moment().add(1, 'days');
     console.log('Backfill script will process the following date range in 1 day intervals');
     console.log('startDate', startDate);

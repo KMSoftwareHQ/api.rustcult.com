@@ -62,7 +62,8 @@ CREATE TABLE player_positions (
   timestamp TIMESTAMP(0),
   x FLOAT,
   y FLOAT,
-  PRIMARY KEY (server_incrementing_id, user_incrementing_id, timestamp)
+  PRIMARY KEY (server_incrementing_id, user_incrementing_id, timestamp),
+  INDEX (timestamp)
 );
 
 CREATE TABLE player_bases (
