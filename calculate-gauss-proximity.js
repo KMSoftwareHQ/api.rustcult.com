@@ -125,26 +125,25 @@ function ProcessOneSecondOnOneServer(t, serverId) {
 // first person to figure it out would shoot to the top of the structure, embarassing the
 // whole system.
 function DetectMacroMovement(x, y, footsteps) {
-    const minDisplacementToGetMovementPoints = 10;
+    const minDisplacementToGetMovementPoints = 7;
     const sq = minDisplacementToGetMovementPoints * minDisplacementToGetMovementPoints;
     for (const footstep of footsteps) {
 	const dx = footstep.x - x;
 	const dy = footstep.y - y;
 	const d2 = (dx * dx) + (dy * dy);
 	if (d2 > sq) {
-	    // The player ventured further than 10m from their present location.
+	    // The player ventured further than 7m from their present location.
 	    // That is a macro movement.
 	    return true;
 	}
     }
-    // The player does not venture further than 10m from the spot they are currently standing.
+    // The player does not venture further than 7m from the spot they are currently standing.
     // This is not macro movement.
     return false;
 }
 
 function Gauss(x) {
-    const sqrt2Pi = Math.sqrt(2 * Math.PI);
-    return Math.exp(-0.5 * x * x) / sqrt2Pi;
+    return Math.exp(-x * x);
 }
 
 let maxMovingUsers = 0;
@@ -154,7 +153,7 @@ function MovingUsersDetected(moving, t) {
     users.sort();
     const n = users.length;
     maxMovingUsers = Math.max(n, maxMovingUsers);
-    const gaussFilterRadius = 10;
+    const gaussFilterRadius = 50;
     for (let i = 0; i < n; i++) {
 	const ui = users[i];
 	const a = moving[ui];
