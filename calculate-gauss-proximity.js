@@ -1,8 +1,10 @@
 const db = require('./database');
 const moment = require('moment');
+const UserCache = require('./user-cache');
 
 const sessionTimeout = 60 * 1000;
 let footstepQueueByServerAndUserId = {};
+const mostRecentMovementTimeByUserIncrementingId = {};
 
 function QueueFootstep(serverId, userId, t, x, y) {
     if (!(serverId in footstepQueueByServerAndUserId)) {
@@ -85,6 +87,7 @@ function ProcessOneSecondOnOneServer(t, serverId) {
     const maxMovementSq = maxMovement * maxMovement;
     const moving = {};
     for (const userId in mostRecentFootstepByUser) {
+	mostRecentMovementTimeByUserIncrementingId[userId] = t;
 	const from = mostRecentFootstepByUser[userId];
 	if (!(userId in nextFootstepByUser)) {
 	    continue;
@@ -334,12 +337,33 @@ function PrintRelationships() {
     }
 }
 
+async function PrintRecentlyActiveSteamIds() {
+    const inactivityDays = 90;
+    const inactivityMillis = inactivityDays * 24 * 60 * 60 * 1000;
+    console.log(`List of Steam IDs with in-game movements in the last ${inactivityDays} days`);
+    for (const i in mostRecentMovementTimeByUserIncrementingId) {
+	const t = mostRecentMovementTimeByUserIncrementingId[i];
+	const age = Date.now() - t;
+	if (age < inactivityMillis) {
+	    const steamId = userIncrementingIdToSteamId[i];
+	    const cu = UserCache.GetUserBySteamId(steamId);
+	    let steamName = 'John Doe';
+	    if (cu) {
+		steamName = cu.steamName || 'John Doe';
+	    }
+	    console.log(steamId + ',' + steamName);
+	}
+    }
+}
+
 async function Main() {
+    await UserCache.Initialize();
     const startDate = moment('2022-11-01');
+    //const startDate = moment('2024-03-25');
     const endDate = moment().add(1, 'days');
     console.log('Backfill script will process the following date range in 1 day intervals');
-    console.log('startDate', startDate);
-    console.log('endDate', endDate);
+    console.log('startDate', startDate.format('YYYY-MM-DD'));
+    console.log('endDate', endDate.format('YYYY-MM-DD'));
     let currentlyProcessingDate = moment(startDate);
     let timeCursor;
     let secondsProcessed = 0;
@@ -379,6 +403,7 @@ async function Main() {
     RelationshipSummary();
     PrintAllIndividualActivityPoints();
     PrintRelationships();
+    await PrintRecentlyActiveSteamIds();
     await db.End();
 }
 
