@@ -45,7 +45,7 @@ function ParseHtml(html) {
 // Parses Rust+ app /credentials line: key:value pairs.
 // e.g. gcm_android_id:123 gcm_security_token:456 steam_id:76561198076743352 token:xxx
 function ParseCredentialsLine(line) {
-    const genericError = { error: 'Invalid credentials line. Use the format from the Rust+ app (e.g. gcm_android_id:... steam_id:...). If the app shows a token, include token:... or auth_token:...' };
+    const genericError = { error: 'Invalid credentials line. Paste the line from Rust++ credentials (it must include steam_id and token/auth_token).' };
     if (!line || typeof line !== 'string') {
 	return genericError;
     }
@@ -63,12 +63,10 @@ function ParseCredentialsLine(line) {
     if (!steamId || steamId.length !== 17) {
 	return { error: 'Credentials line must include steam_id (17 digits).' };
     }
+    // Rust+ auth token is not the same as gcm_security_token; require token/auth_token here.
     let token = pairs.token || pairs.auth_token;
-    if (!token && pairs.gcm_security_token) {
-	token = String(pairs.gcm_security_token);
-    }
     if (!token || token.length < 10) {
-	return { error: 'Credentials line must include token, auth_token, or gcm_security_token.' };
+	return { error: 'Credentials line must include token or auth_token.' };
     }
     return { steamId, token };
 }

@@ -33,6 +33,7 @@
     "passport-discord": "^0.1.4",
     "passport-steam": "^1.0.17",
     "push-receiver": "^2.1.1",
+    "push-receiver-v2": "^2.2.0",
     "random-seed": "^0.3.0",
     "uuid": "^9.0.0"
   }

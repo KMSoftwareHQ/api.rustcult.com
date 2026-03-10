@@ -7,6 +7,9 @@ node_modules/*
 # File containing secrets.
 secrets.js
 
+# push-receiver-v2 persistent credentials
+push-receiver-v2-credentials.json
+
 # Local SSL certs (production uses Let's Encrypt).
 ssl/
 
