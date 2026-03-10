@@ -7,5 +7,8 @@ node_modules/*
 # File containing secrets.
 secrets.js
 
+# Local SSL certs (production uses Let's Encrypt).
+ssl/
+
 # package-lock.json can be auto-generated for now.
 package-lock.json

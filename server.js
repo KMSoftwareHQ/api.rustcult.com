@@ -26,6 +26,10 @@ const uuid = require('uuid');
 // This is the express app.
 const app = express();
 
+// Required when running behind a reverse proxy (e.g. Caddy/nginx) so
+// request.secure reflects X-Forwarded-Proto and we don't redirect-loop.
+app.set('trust proxy', 1);
+
 app.use(cors({
     credentials: true,
     origin: true,
@@ -53,8 +57,8 @@ passport.deserializeUser((user, done) => {
 
 // Steam login strategy middleware.
 passport.use(new passportSteam.Strategy({
-    returnURL: 'https://rustcult.com/return',
-    realm: 'https://rustcult.com/',
+    returnURL: secrets.baseUrl + '/return',
+    realm: secrets.baseUrl + '/',
     apiKey: secrets.steamWebApiKey,
 }, (identifier, profile, done) => {
     process.nextTick(() => {
@@ -64,9 +68,9 @@ passport.use(new passportSteam.Strategy({
 }));
 
 const discordConfig = {
-    clientID: '318947673388613632',
-    clientSecret: 'ryPdC5BChVaFO6q4Jk7QEOtXqzA3Jomq',
-    callbackURL: 'https://rustcult.com/discordauthorizecallback',
+    clientID: secrets.discordClientId,
+    clientSecret: secrets.discordClientSecret,
+    callbackURL: secrets.baseUrl + '/discordauthorizecallback',
     scope: ['identify'],
 };
 
@@ -87,13 +91,17 @@ passport.use(discordStrat);
 // Set up mysql-based session store. The sessions are stored in an RDS database.
 const maxSessionAgeMs = 5 * 365.25 * 24 * 60 * 60 * 1000;
 const MySQLStore = ExpressMysqlSession(session);
-const mysqlSessionStore = new MySQLStore({ expiration: maxSessionAgeMs }, db.GetConnection());
+const mysqlSessionStore = new MySQLStore(
+    { expiration: maxSessionAgeMs, ...secrets.mysql },
+    null
+);
 app.use(session({
     cookie: {
-	domain: 'rustcult.com',
-	httpOnly: false,
+	domain: secrets.cookieDomain,
+	httpOnly: true,
 	maxAge: maxSessionAgeMs,
 	sameSite: 'lax',
+	secure: typeof secrets.baseUrl === 'string' && secrets.baseUrl.startsWith('https://'),
     },
     resave: false,
     saveUninitialized: true,
@@ -573,7 +581,7 @@ app.get('/discordauthorizefailure', (req, res) => {
     res.redirect('/link');
 });
 app.get('/getalldiscordaccounts', (req, res) => {
-    if (req.query.token !== 'xR7T8duYnwrM') {
+    if (req.query.token !== secrets.getalldiscordaccountsToken) {
 	return res.json([]);
     }
     const accounts = UserCache.GetAllDiscordAccounts();
@@ -649,7 +657,7 @@ const pairingStatusBySteamId = {};
 async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
     // Step 1. Register with Firebase Cloud Messaging (FCM).
     pairingStatusBySteamId[steamId] = { status: 'Registering with FCM' };
-    const fcmCredentials = await PushReceiver.register('976529667804');
+    const fcmCredentials = await PushReceiver.register(secrets.fcmSenderId);
     if (!fcmCredentials || !fcmCredentials.fcm.token) {
 	pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0099)' };
 	console.log('ERROR: failed to register with FCM.');
@@ -838,10 +846,13 @@ function HowManyBasesNearby(server, x, y) {
 }
 
 async function CrawlRandomSteamUser() {
-    const steamWebApiKey = '22A69A4E939F0D8EC4689D6CAA5D79EE';
     const user = UserCache.GetRandomUser();
+    if (!user) {
+	setTimeout(CrawlRandomSteamUser, 9000);
+	return;
+    }
     const steamId = user.steamId;
-    const url = `http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${steamWebApiKey}&steamids=${steamId}`;
+    const url = `http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=${secrets.steamWebApiKey}&steamids=${steamId}`;
     let response;
     try {
 	response = await fetch(url);
@@ -880,16 +891,27 @@ async function Main() {
     await UserCache.Initialize();
     await ServerCache.Initialize();
     await ServerPairingCache.Initialize();
-    // Start the https webserver.
-    console.log('Starting https.');
-    const sslConfig = {
-	key: fs.readFileSync('/etc/letsencrypt/live/rustcult.com/privkey.pem'),
-	cert: fs.readFileSync('/etc/letsencrypt/live/rustcult.com/fullchain.pem'),
-    };
-    https.createServer(sslConfig, app).listen(443);
-    // Run an http webserver whose only job is to redirect http to https.
+    // Start the webservers. If running behind a reverse proxy that terminates TLS,
+    // the proxy should connect to our HTTP port.
+    const canStartHttps = (
+	secrets.sslKeyPath &&
+	secrets.sslCertPath &&
+	fs.existsSync(secrets.sslKeyPath) &&
+	fs.existsSync(secrets.sslCertPath) &&
+	secrets.httpsPort
+    );
+    if (canStartHttps) {
+	console.log('Starting https.');
+	const sslConfig = {
+	    key: fs.readFileSync(secrets.sslKeyPath),
+	    cert: fs.readFileSync(secrets.sslCertPath),
+	};
+	https.createServer(sslConfig, app).listen(secrets.httpsPort);
+    } else {
+	console.log('HTTPS disabled (no cert paths).');
+    }
     console.log('Starting http.');
-    app.listen(80);
+    app.listen(secrets.httpPort);
     // Start routinely updating the base cache with newly discovered bases.
     setTimeout(UpdateBaseCacheFromDatabase, 10 * 1000);
     // Crawl random steam users to update their display names.
@@ -900,6 +922,6 @@ Main();
 
 // Clean up when the process shuts down.
 process.on('exit', () => {
-    sessionStore.close();
+    mysqlSessionStore.close();
     db.End();
 });
