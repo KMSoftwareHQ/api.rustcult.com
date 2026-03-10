@@ -655,70 +655,84 @@ const pairingStatusBySteamId = {};
 
 // Listen for a server pairing request, given a Rust+ auth token.
 async function HandleServerPairingRequest(steamId, rustPlusAuthToken) {
-    // Step 1. Register with Firebase Cloud Messaging (FCM).
-    pairingStatusBySteamId[steamId] = { status: 'Registering with FCM' };
-    const fcmCredentials = await PushReceiver.register(secrets.fcmSenderId);
-    if (!fcmCredentials || !fcmCredentials.fcm.token) {
+    try {
+	if (!secrets.fcmSenderId) {
+	    pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0099)' };
+	    console.error('[pair] FCM not configured: fcmSenderId missing in secrets.');
+	    return;
+	}
+	// Step 1. Register with Firebase Cloud Messaging (FCM).
+	// Note: push-receiver uses FCM endpoint deprecated/removed June 2024; register() often fails (0099).
+	pairingStatusBySteamId[steamId] = { status: 'Registering with FCM' };
+	const fcmCredentials = await PushReceiver.register(secrets.fcmSenderId);
+	if (!fcmCredentials || !fcmCredentials.fcm || !fcmCredentials.fcm.token) {
+	    pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0099)' };
+	    console.error('[pair] FCM register failed or returned invalid credentials. Google deprecated the FCM endpoint used by push-receiver (June 2024); see https://firebase.google.com/support/faq#fcm-depr-features');
+	    return;
+	}
+
+	// Step 2. Fetch expo push token.
+	pairingStatusBySteamId[steamId] = { status: 'Fetching Expo Push Token' };
+	let expoPushTokenError = false;
+	const expoPushToken = await GetExpoPushToken(fcmCredentials).catch((error) => {
+	    expoPushTokenError = true;
+	    pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0089)' };
+	    console.log('Failed to fetch Expo Push Token');
+	    console.log(error);
+	});
+	if (expoPushTokenError) {
+	    return;
+	}
+
+	// Step 3. Register with Rust+ API.
+	pairingStatusBySteamId[steamId] = { status: 'Registering with Rust+ Companion API' };
+	let registrationError = false;
+	await RegisterWithRustPlus(rustPlusAuthToken, expoPushToken).catch((error) => {
+	    registrationError = true;
+	    pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0079)' };
+	    console.log('Failed to register with Rust+ Companion API');
+	    console.log(error);
+	});
+	if (registrationError) {
+	    return;
+	}
+
+	// Step 4. Listen for the user to press the Pair button in-game.
+	pairingStatusBySteamId[steamId] = { status: 'Trying to listen for the Pair button in-game' };
+	console.log('Trying to listen for the Pair button in-game');
+	const fcmClient = await PushReceiver.listen(fcmCredentials, async ({ notification, persistentId }) => {
+	    try {
+		const body = JSON.parse(notification.data.body);
+		if (body.playerToken) {
+		    pairingStatusBySteamId[steamId] = { status: 'Rust+ token received' };
+		    const serverRecord = await ServerCache.GetServerRecordFromPairingNotification(body);
+		    await serverRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
+		    const pairingRecord = await ServerPairingCache.GetPairingRecordFromPairingNotification(body);
+		    await pairingRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
+		    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
+		}
+	    } catch (error) {
+		console.error('[pair] FCM notification parse/handle error:', error);
+	    }
+	});
+	pairingStatusBySteamId[steamId] = { status: 'Press the Pair button in-game' };
+
+	setTimeout(() => {
+	    try {
+		delete pairingStatusBySteamId[steamId];
+		fcmClient.destroy();
+	    } catch (error) {
+		console.log('Error while destroying FCM client:', error);
+	    }
+	}, 3600 * 1000);
+    } catch (err) {
 	pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0099)' };
-	console.log('ERROR: failed to register with FCM.');
-	return;
-    }
-
-    // Step 2. Fetch expo push token.
-    pairingStatusBySteamId[steamId] = { status: 'Fetching Expo Push Token' };
-    let expoPushTokenError = false;
-    const expoPushToken = await GetExpoPushToken(fcmCredentials).catch((error) => {
-	expoPushTokenError = true;
-	pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0089)' };
-	console.log('Failed to fetch Expo Push Token');
-	console.log(error);
-    });
-    if (expoPushTokenError) {
-	return;
-    }
-
-    // Step 3. Register with Rust+ API.
-    pairingStatusBySteamId[steamId] = { status: 'Registering with Rust+ Companion API' };
-    let registrationError = false;
-    const rustPlusRegistration = await RegisterWithRustPlus(rustPlusAuthToken, expoPushToken).catch((error) => {
-	registrationError = true;
-	pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0079)' };
-	console.log('Failed to register with Rust+ Companion API');
-	console.log(error);
-    });
-    if (registrationError) {
-	return;
-    }
-
-    // Step 4. Listen for the user to press the Pair button in-game.
-    pairingStatusBySteamId[steamId] = { status: 'Trying to listen for the Pair button in-game' };
-    console.log('Trying to listen for the Pair button in-game');
-    const fcmClient = await PushReceiver.listen(fcmCredentials, async ({ notification, persistentId }) => {
-	//console.log('Received FCM notification:', notification);
-	const body = JSON.parse(notification.data.body);
-	//console.log('Parsed FCM notification:', JSON.stringify(body));
-	if (body.playerToken) {
-	    pairingStatusBySteamId[steamId] = { status: 'Rust+ token received' };
-	    const serverRecord = await ServerCache.GetServerRecordFromPairingNotification(body);
-	    await serverRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
-	    //console.log('Server record from cache:', serverRecord);
-	    const pairingRecord = await ServerPairingCache.GetPairingRecordFromPairingNotification(body);
-	    await pairingRecord.UpdateBasedOnServerPairingConfirmationMessage(body);
-	    //console.log('Pairing record from cache:', pairingRecord);
-	    pairingStatusBySteamId[steamId] = { success: 'Successfully paired' };
+	console.error('[pair]', err && err.message ? err.message : err);
+	if (err && err.stack) {
+	    console.error(err.stack);
 	}
-    });
-    pairingStatusBySteamId[steamId] = { status: 'Press the Pair button in-game' };
-
-    // Step 5. Stop listening for server pairing requests after an hour has passed.
-    setTimeout(() => {
-	try {
-	    delete pairingStatusBySteamId[steamId];
-	    fcmClient.destroy();
-	} catch (error) {
-	    console.log('Error while destroying FCM client:', error);
-	}
-    }, 3600 * 1000);
+	// 0099 often means FCM registration failed: Google deprecated the push-receiver endpoint (June 2024).
+    }
 }
 
 // Returns the status of a logged-in user's ongoing server pairing request.
@@ -734,20 +748,32 @@ app.post('/pair', (req, res) => {
     // Initiate a new server pairing request if the client asks,
     // and there is not one already under way.
     const pairingAlreadyUnderway = status && status.status;
-    if (req.body.pageSource && !pairingAlreadyUnderway) {
-	// Initiate new pairing request.
-	const pageSource = req.body.pageSource;
-	const parsed = ParseHtml(pageSource);
+    const pageSource = req.body.pageSource;
+    const credentialsLine = req.body.credentialsLine;
+    if ((pageSource || credentialsLine) && !pairingAlreadyUnderway) {
+	let parsed;
+	if (credentialsLine) {
+	    if (typeof credentialsLine !== 'string') {
+		return res.json({ error: 'Invalid credentials line.' });
+	    }
+	    parsed = ParseHtml.ParseCredentialsLine(credentialsLine);
+	} else {
+	    if (typeof pageSource !== 'string') {
+		return res.json({ error: 'Invalid page source.' });
+	    }
+	    parsed = ParseHtml(pageSource);
+	}
 	if (parsed.error) {
 	    return res.json({ error: parsed.error });
 	}
 	if (parsed.steamId !== steamId) {
-	    return res.json({ error: 'You must pair in-game using the same Steam account' });
+	    return res.json({ error: 'You must pair using the same Steam account as this site.' });
 	}
 	pairingStatusBySteamId[steamId] = { status: 'Initiating server pairing' };
-	// Do not await. Respond immediately with the status of the server pairing request.
-	// The client will poll for the updated status of their pairing request.
-	HandleServerPairingRequest(steamId, parsed.token);
+	HandleServerPairingRequest(steamId, parsed.token).catch((error) => {
+	    pairingStatusBySteamId[steamId] = { status: 'Failed to pair. Try again. (Error code 0099)' };
+	    console.error('[pair]', error);
+	});
     }
     const response = pairingStatusBySteamId[steamId] || { success: 'Follow the instructions to pair a server' };
     return res.json(response);
