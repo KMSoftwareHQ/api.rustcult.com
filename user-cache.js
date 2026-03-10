@@ -1,6 +1,8 @@
 const db = require('./database');
 const moment = require('moment');
 
+const MYSQL_DATETIME = 'YYYY-MM-DD HH:mm:ss';
+
 class User {
     constructor(databaseRow) {
 	this.incrementingId = databaseRow.incrementing_id;
@@ -109,16 +111,19 @@ class User {
 
     async SetLastMovementTime() {
 	this.lastMovementTime = moment().format();
-	await db.Query('UPDATE users SET last_movement_time = ? WHERE steam_id = ?', [this.lastMovementTime, this.steamId]);
+	const t = moment().format(MYSQL_DATETIME);
+	await db.Query('UPDATE users SET last_movement_time = ? WHERE steam_id = ?', [t, this.steamId]);
     }
 
     async SetLastBaseDetectionTime() {
 	this.lastBaseDetectionTime = moment().format();
-	await db.Query('UPDATE users SET last_base_detection_time = ? WHERE steam_id = ?', [this.lastBaseDetectionTime, this.steamId]);
+	const t = moment().format(MYSQL_DATETIME);
+	await db.Query('UPDATE users SET last_base_detection_time = ? WHERE steam_id = ?', [t, this.steamId]);
     }
 
     async SetLastSeenAlive(server, x, y) {
 	const t = moment().format();
+	const tSql = moment().format(MYSQL_DATETIME);
 	const breadcrumbDistance = 10;
 	if (!this.breadcrumbTime ||
 	    !this.breadcrumbX ||
@@ -129,12 +134,12 @@ class User {
 	    this.breadcrumbTime = t;
 	    this.breadcrumbX = x;
 	    this.breadcrumbY = y;
-	    
 	}
 	this.lastSeenAliveTime = t;
 	this.lastSeenAliveServer = server;
 	this.lastSeenAliveX = x;
 	this.lastSeenAliveY = y;
+	const breadcrumbTimeSql = this.breadcrumbTime ? moment(this.breadcrumbTime).unix() : null;
 	const sql = ('UPDATE users SET ' +
 		     'last_seen_alive_time = ?, ' +
 		     'last_seen_alive_server = ?, ' +
@@ -144,7 +149,7 @@ class User {
 		     'breadcrumb_x = ?, ' +
 		     'breadcrumb_y = ? ' +
 		     'WHERE steam_id = ?');
-	const values = [t, server, x, y, this.breadcrumbTime, this.breadcrumbX, this.breadcrumbY, this.steamId];
+	const values = [tSql, server, x, y, breadcrumbTimeSql, this.breadcrumbX, this.breadcrumbY, this.steamId];
 	await db.Query(sql, values);
     }
 
@@ -153,7 +158,9 @@ class User {
 	if (!this.breadcrumbTime) {
 	    return currentEpoch;
 	}
-	const breadcrumbEpoch = moment(this.breadcrumbTime).unix();
+	const breadcrumbEpoch = typeof this.breadcrumbTime === 'number'
+	    ? this.breadcrumbTime
+	    : moment(this.breadcrumbTime).unix();
 	return currentEpoch - breadcrumbEpoch;
     }
 

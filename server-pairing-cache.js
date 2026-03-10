@@ -1,6 +1,8 @@
 const db = require('./database');
 const moment = require('moment');
 
+const MYSQL_DATETIME = 'YYYY-MM-DD HH:mm:ss';
+
 class ServerPairing {
     constructor(databaseRow) {
 	this.serverHostAndPort = databaseRow.server_host_and_port;
@@ -20,7 +22,7 @@ class ServerPairing {
 	    [this.token, this.serverHostAndPort, this.userSteamId]);
 	// If we get here, it means that the token has changed in value. So then reset the failure count.
 	await this.SetConsecutiveFailureCount(0);
-	await this.SetNextRetryTime(moment().format());
+	await this.SetNextRetryTime(moment().format(MYSQL_DATETIME));
     }
 
     async SetConsecutiveFailureCount(consecutiveFailureCount) {
@@ -41,9 +43,10 @@ class ServerPairing {
 	    return;
 	}
 	this.nextRetryTime = nextRetryTime;
+	const valueForDb = nextRetryTime == null ? null : moment(nextRetryTime).format(MYSQL_DATETIME);
 	await db.Query(
 	    'UPDATE server_pairings SET next_retry_time = ? WHERE server_host_and_port = ? AND user_steam_id = ?',
-	    [this.nextRetryTime, this.serverHostAndPort, this.userSteamId]);
+	    [valueForDb, this.serverHostAndPort, this.userSteamId]);
     }
 
     async IncrementFailureCount() {
@@ -52,7 +55,7 @@ class ServerPairing {
 	const currentTime = moment();
 	const retryTime = currentTime.add(timeoutSeconds, 'seconds');
 	await this.SetConsecutiveFailureCount(c + 1);
-	await this.SetNextRetryTime(retryTime.format());
+	await this.SetNextRetryTime(retryTime.format(MYSQL_DATETIME));
     }
 
     IsAlive() {
@@ -120,6 +123,7 @@ async function CreateNewPairingInDatabase(message) {
 	throw 'Creating new server pairing in the database requires a valid server pairing notification.';
     }
     const hostAndPort = message.ip + ':' + message.port;
+    const userSteamId = String(message.playerId);
     console.log(`Creating new server pairing record in the database.`);
     const currentTime = moment();
     const query = (
@@ -127,11 +131,11 @@ async function CreateNewPairingInDatabase(message) {
 	'(server_host_and_port, user_steam_id, token, consecutive_failure_count, next_retry_time) ' +
 	'VALUES (?, ?, ?, ?, ?)'
     );
-    const values = [hostAndPort, message.playerId, message.playerToken, 0, currentTime.format()];
+    const values = [hostAndPort, userSteamId, message.playerToken, 0, currentTime.format(MYSQL_DATETIME)];
     await db.Query(query, values);
     const results = await db.Query(
 	'SELECT * FROM server_pairings where server_host_and_port = ? AND user_steam_id = ?',
-	[hostAndPort, message.playerId]);
+	[hostAndPort, userSteamId]);
     if (results.length !== 1) {
 	throw 'Got back 2 matching server pairing records after creating a new database record. This should not happen.';
     }
@@ -153,7 +157,7 @@ async function AssociateUserWithServerWithoutToken(serverHostAndPort, userSteamI
 	'(server_host_and_port, user_steam_id, token, consecutive_failure_count, next_retry_time) ' +
 	'VALUES (?, ?, NULL, ?, ?)'
     );
-    const values = [serverHostAndPort, userSteamId, 0, currentTime.format()];
+    const values = [serverHostAndPort, userSteamId, 0, currentTime.format(MYSQL_DATETIME)];
     await db.Query(query, values);
     const results = await db.Query(
 	'SELECT * FROM server_pairings where server_host_and_port = ? AND user_steam_id = ?',
@@ -171,7 +175,8 @@ async function AssociateUserWithServerWithoutToken(serverHostAndPort, userSteamI
 // Gets a server pairing record from the database cache. If no record with
 // the same host, port, and SteamID exists, then one is created.
 async function GetPairingRecordFromPairingNotification(message) {
-    const cacheKey = message.ip + ':' + message.port + ':' + message.playerId;
+    const steamIdStr = String(message.playerId);
+    const cacheKey = message.ip + ':' + message.port + ':' + steamIdStr;
     const cachedPairing = pairingsByHostPortAndSteamId[cacheKey];
     if (cachedPairing) {
 	return cachedPairing;
@@ -181,7 +186,7 @@ async function GetPairingRecordFromPairingNotification(message) {
 }
 
 function GetPairingRecordFromHostPortAndSteamId(host, port, steamId) {
-    const cacheKey = host + ':' + port + ':' + steamId;
+    const cacheKey = host + ':' + port + ':' + String(steamId);
     const cachedPairing = pairingsByHostPortAndSteamId[cacheKey];
     if (cachedPairing) {
 	return cachedPairing;
@@ -191,20 +196,24 @@ function GetPairingRecordFromHostPortAndSteamId(host, port, steamId) {
 }
 
 async function GetOrCreatePairingRecordFromHostPortAndSteamId(hostAndPort, steamId) {
-    const cacheKey = hostAndPort + ':' + steamId;
+    const steamIdStr = String(steamId);
+    const cacheKey = hostAndPort + ':' + steamIdStr;
     const cachedPairing = pairingsByHostPortAndSteamId[cacheKey];
     if (cachedPairing) {
 	return cachedPairing;
     } else {
-	return await AssociateUserWithServerWithoutToken(hostAndPort, steamId);
+	return await AssociateUserWithServerWithoutToken(hostAndPort, steamIdStr);
     }
 }
 
 // Returns a list of server pairing records that are still alive for a steam ID.
 function GetAllPairingsForUser(steamId) {
+    const steamIdStr = String(steamId);
+	console.log("Pairs for user: ", steamIdStr);
     const matches = [];
     for (const pair of Object.values(pairingsByHostPortAndSteamId)) {
-	if (pair.userSteamId === steamId && pair.IsAlive()) {
+	if (String(pair.userSteamId) === steamIdStr && pair.IsAlive()) {
+		console.log("Pair found: ", pair.serverHostAndPort);
 	    matches.push(pair);
 	}
     }

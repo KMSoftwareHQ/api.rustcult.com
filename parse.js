@@ -42,6 +42,49 @@ function ParseHtml(html) {
     return { steamId, token };
 }
 
+// Parses Rust+ config JSON (e.g. from rustplus.js CLI or manual export).
+// Expected: { fcm_credentials: { gcm: { androidId, securityToken }, fcm: { token } }, expo_push_token, rustplus_auth_token }
+function ParseRustPlusConfig(str) {
+    const genericError = { error: 'Invalid Rust+ config JSON. Need fcm_credentials (gcm.androidId, gcm.securityToken, fcm.token), expo_push_token, rustplus_auth_token.' };
+    if (!str || typeof str !== 'string') {
+	return genericError;
+    }
+    const trimmed = str.trim();
+    if (!trimmed.startsWith('{') || !trimmed.endsWith('}')) {
+	return genericError;
+    }
+    let data;
+    try {
+	data = JSON.parse(trimmed);
+    } catch (e) {
+	return genericError;
+    }
+    if (!data || typeof data !== 'object') return genericError;
+    const creds = data.fcm_credentials;
+    if (!creds || !creds.gcm || creds.gcm.androidId == null || creds.gcm.securityToken == null) {
+	return { error: 'Config must include fcm_credentials.gcm.androidId and fcm_credentials.gcm.securityToken.' };
+    }
+    const fcmToken = creds.fcm && creds.fcm.token;
+    if (!fcmToken || typeof fcmToken !== 'string') {
+	return { error: 'Config must include fcm_credentials.fcm.token.' };
+    }
+    const expoPushToken = data.expo_push_token;
+    if (!expoPushToken || typeof expoPushToken !== 'string') {
+	return { error: 'Config must include expo_push_token.' };
+    }
+    const token = data.rustplus_auth_token;
+    if (!token || typeof token !== 'string') {
+	return { error: 'Config must include rustplus_auth_token.' };
+    }
+    const fcmCredentials = {
+	gcm: { androidId: String(creds.gcm.androidId), securityToken: String(creds.gcm.securityToken) },
+	fcm: { token: fcmToken },
+	persistentIds: creds.persistentIds || [],
+    };
+    if (creds.keys) fcmCredentials.keys = creds.keys;
+    return { token, expoPushToken, fcmCredentials };
+}
+
 // Parses Rust+ app /credentials line: key:value pairs.
 // e.g. gcm_android_id:123 gcm_security_token:456 steam_id:76561198076743352 token:xxx
 function ParseCredentialsLine(line) {
@@ -75,3 +118,4 @@ function ParseCredentialsLine(line) {
 
 module.exports = ParseHtml;
 module.exports.ParseCredentialsLine = ParseCredentialsLine;
+module.exports.ParseRustPlusConfig = ParseRustPlusConfig;

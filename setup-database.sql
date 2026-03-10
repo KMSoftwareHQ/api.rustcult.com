@@ -1,3 +1,10 @@
+CREATE TABLE IF NOT EXISTS sessions (
+  session_id VARCHAR(128) NOT NULL,
+  expires INT UNSIGNED NOT NULL,
+  data MEDIUMTEXT,
+  PRIMARY KEY (session_id)
+);
+
 CREATE TABLE users (
   incrementing_id INT NOT NULL AUTO_INCREMENT,
   steam_id VARCHAR(64) NOT NULL,

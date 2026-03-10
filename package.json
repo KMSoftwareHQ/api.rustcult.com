@@ -17,7 +17,7 @@
   },
   "homepage": "https://github.com/j3camero/api.rustcult.com#readme",
   "dependencies": {
-    "@liamcottle/rustplus.js": "^2.3.0",
+    "@liamcottle/rustplus.js": "github:alexemanuelol/rustplus.js#temp-fix-message-error",
     "assert": "^2.0.0",
     "canvas": "^2.10.2",
     "cors": "^2.8.5",
@@ -32,6 +32,7 @@
     "passport": "^0.6.0",
     "passport-discord": "^0.1.4",
     "passport-steam": "^1.0.17",
+    "@liamcottle/push-receiver": "^0.0.4",
     "push-receiver": "^2.1.1",
     "random-seed": "^0.3.0",
     "uuid": "^9.0.0"

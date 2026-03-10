@@ -1,6 +1,8 @@
 const db = require('./database');
 const moment = require('moment');
 
+const MYSQL_DATETIME = 'YYYY-MM-DD HH:mm:ss';
+
 class Server {
     constructor(databaseRow) {
 	this.incrementingId = databaseRow.incrementing_id;
@@ -72,7 +74,8 @@ class Server {
 	    return;
 	}
 	this.mapImageUpdateTime = mapImageUpdateTime;
-	await db.Query('UPDATE servers SET map_image_update_time = ? WHERE host_and_port = ?', [this.mapImageUpdateTime, this.hostAndPort]);
+	const valueForDb = mapImageUpdateTime == null ? null : moment(mapImageUpdateTime).format(MYSQL_DATETIME);
+	await db.Query('UPDATE servers SET map_image_update_time = ? WHERE host_and_port = ?', [valueForDb, this.hostAndPort]);
     }
 
     async SetMapSize(mapSize) {
