@@ -13,3 +13,5 @@ ssl/
 # package-lock.json can be auto-generated for now.
 package-lock.json
 push-receiver-v2-credentials.json
+
+1notes.txt
