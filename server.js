@@ -18,6 +18,7 @@ const PushReceiver = require('push-receiver');
 const LiamPushReceiver = require('@liamcottle/push-receiver');
 const rustplus = require('./rustplus');
 const secrets = require('./secrets');
+const { isValidSteamId } = require('./lib/steam-id');
 const ServerCache = require('./server-cache');
 const ServerPairingCache = require('./server-pairing-cache');
 const session = require('express-session');
@@ -388,10 +389,7 @@ async function UpdateHighPriestStatus(req, res, newIsHighPriest) {
 	return res.redirect('/');
     }
     const targetSteamId = req.query.steamid;
-    if (!targetSteamId) {
-	return res.redirect('/');
-    }
-    if (targetSteamId.length !== 17) {
+    if (!targetSteamId || !isValidSteamId(targetSteamId)) {
 	return res.redirect('/');
     }
     const target = UserCache.GetUserBySteamId(targetSteamId);
@@ -452,10 +450,7 @@ async function UpdateCultMemberStatus(req, res, newIsCultMember) {
 	return res.redirect('/');
     }
     const targetSteamId = req.query.steamid;
-    if (!targetSteamId) {
-	return res.redirect('/');
-    }
-    if (targetSteamId.length !== 17) {
+    if (!targetSteamId || !isValidSteamId(targetSteamId)) {
 	return res.redirect('/');
     }
     const target = UserCache.GetUserBySteamId(targetSteamId);

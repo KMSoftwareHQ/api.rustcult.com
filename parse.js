@@ -1,6 +1,7 @@
 // Parses a token & SteamID out of an HTML web page.
 // The page is a response after the user logs in to
 // the Rust+ companion login page.
+const { isValidSteamId } = require('./lib/steam-id');
 
 function ParseHtml(html) {
     const genericError = { error: `That's not the right text to paste. Please check the instructions above and try again.` };
@@ -21,10 +22,9 @@ function ParseHtml(html) {
     }
     const steamIdOnwards = html.substring(steamIdPosition + steamIdMarker.length);
     const steamIdEnd = steamIdOnwards.indexOf(`\\`);
-    if (steamIdEnd !== 17) {
-	return genericError;
-    }
+    if (steamIdEnd < 0) return genericError;
     const steamId = steamIdOnwards.substring(0, steamIdEnd);
+    if (!isValidSteamId(steamId)) return genericError;
     const tokenMarker = String.raw`\"Token\":\"`;
     const tokenPosition = html.indexOf(tokenMarker);
     if (tokenPosition < 0) {
@@ -103,8 +103,8 @@ function ParseCredentialsLine(line) {
 	pairs[m[1]] = m[2];
     }
     const steamId = pairs.steam_id || pairs.steamId;
-    if (!steamId || steamId.length !== 17) {
-	return { error: 'Credentials line must include steam_id (17 digits).' };
+    if (!steamId || !isValidSteamId(steamId)) {
+	return { error: 'Credentials line must include a valid steam_id (numeric, 17+ digits).' };
     }
     let token = pairs.token || pairs.auth_token;
     if (!token && pairs.gcm_security_token) {
